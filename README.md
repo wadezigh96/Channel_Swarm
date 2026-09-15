@@ -1,4 +1,4 @@
-# ChannelSwarm Agent
+# Swarm Agent
 
 > **The rarest Agentic Payments project on Solana.**  
 > Autonomous multi-agent swarm that opens **Payment Channels**, settles **x402** micropayments at extreme scale, and runs **Stocknized Agents** that trade tokenized equities — all without a human in the loop.
