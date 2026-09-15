@@ -1,0 +1,37 @@
+{
+  "name": "channel-swarm-agent",
+  "version": "0.1.0",
+  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons",
+  "type": "module",
+  "scripts": {
+    "demo": "tsx examples/demo-swarm.ts",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "keywords": [
+    "solana",
+    "agentic-payments",
+    "x402",
+    "payment-channels",
+    "ai-agent",
+    "stocknized",
+    "clawpump",
+    "meteora",
+    "hackathon"
+  ],
+  "author": "wadezigh96",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "@solana/spl-token": "^0.4.9",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
