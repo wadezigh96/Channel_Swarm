@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChannelSwarm Dashboard</title>
+  <title>ChannelSwarm Dashboard — Solana Agentic Payments</title>
+  <meta name="description" content="Live demo of ChannelSwarm: Payment Channels + A2A micropayments + Stocknized Agents on Solana" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -13,7 +14,6 @@
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100 min-h-screen">
-  <!-- Header -->
   <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -23,7 +23,8 @@
           <p class="text-xs text-zinc-500">Agentic Payments · Solana Hackathon 2026</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/wadezigh96/ChannelSwarm-Agent" target="_blank" class="text-xs text-zinc-400 hover:text-white transition">GitHub</a>
         <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">● LIVE DEMO</span>
       </div>
     </div>
@@ -31,42 +32,47 @@
 
   <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-    <!-- Hero stats -->
+    <div class="bg-gradient-to-r from-emerald-950/50 to-cyan-950/30 border border-emerald-800/40 rounded-xl p-5">
+      <p class="text-sm text-emerald-300/90">
+        <strong>Real Payment Channels program</strong> —
+        <a href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" target="_blank" class="underline mono text-xs">CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX</a>
+        · Canonical 50-byte Ed25519 vouchers · A2A economy · Stocknized Agent
+      </p>
+    </div>
+
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 glow">
         <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Agents Online</p>
-        <p class="text-3xl font-semibold text-emerald-400" id="stat-agents">3</p>
+        <p class="text-3xl font-semibold text-emerald-400">3</p>
       </div>
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Open Channels</p>
-        <p class="text-3xl font-semibold" id="stat-channels">1</p>
+        <p class="text-3xl font-semibold">1</p>
       </div>
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Micropayments</p>
-        <p class="text-3xl font-semibold text-cyan-400" id="stat-vouchers">20</p>
+        <p class="text-3xl font-semibold text-cyan-400">20</p>
       </div>
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">USDC Settled</p>
-        <p class="text-3xl font-semibold" id="stat-settled">0.04</p>
+        <p class="text-3xl font-semibold">0.04</p>
       </div>
     </div>
 
-    <!-- Agents -->
     <section>
       <h2 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-3">Agents</h2>
-      <div class="grid md:grid-cols-3 gap-4" id="agents-grid">
-        <!-- filled by JS -->
-      </div>
+      <div class="grid md:grid-cols-3 gap-4" id="agents-grid"></div>
     </section>
 
-    <!-- Channel + Stock -->
     <div class="grid md:grid-cols-2 gap-6">
       <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
         <h2 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Payment Channel</h2>
         <div class="space-y-3 text-sm">
-          <div class="flex justify-between"><span class="text-zinc-500">Channel ID</span><span class="mono text-xs">ch_7xK9a2f1_1726...</span></div>
+          <div class="flex justify-between"><span class="text-zinc-500">Program</span><span class="mono text-xs text-cyan-400">CHNLxYvV...</span></div>
+          <div class="flex justify-between"><span class="text-zinc-500">Channel PDA</span><span class="mono text-xs">derived from seeds</span></div>
           <div class="flex justify-between"><span class="text-zinc-500">Ceiling</span><span class="text-emerald-400 font-medium">5.00 USDC</span></div>
           <div class="flex justify-between"><span class="text-zinc-500">Spent (vouchers)</span><span>0.04 USDC</span></div>
+          <div class="flex justify-between"><span class="text-zinc-500">Voucher format</span><span class="text-violet-400">50-byte Ed25519</span></div>
           <div class="flex justify-between"><span class="text-zinc-500">Status</span><span class="text-amber-400">Open → Settle ready</span></div>
           <div class="mt-4 pt-4 border-t border-zinc-800">
             <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
@@ -79,7 +85,7 @@
 
       <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
         <h2 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Stocknized Portfolio</h2>
-        <div class="space-y-3" id="portfolio">
+        <div class="space-y-3">
           <div class="flex items-center justify-between py-2 border-b border-zinc-800">
             <div class="flex items-center gap-2">
               <span class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-medium">AAPL</span>
@@ -98,31 +104,33 @@
       </section>
     </div>
 
-    <!-- Activity log -->
     <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
       <h2 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Activity Log</h2>
-      <div class="mono text-xs space-y-1.5 text-zinc-400 max-h-64 overflow-y-auto" id="log">
+      <div class="mono text-xs space-y-1.5 text-zinc-400 max-h-64 overflow-y-auto">
         <div><span class="text-emerald-500">[Swarm]</span> 3 agents online</div>
         <div><span class="text-cyan-500">[Channel]</span> Alpha opened channel with DataOracle (ceiling: 5 USDC)</div>
-        <div><span class="text-violet-400">[x402]</span> Voucher #1 — 0.002 USDC for stock quote</div>
-        <div><span class="text-violet-400">[x402]</span> Voucher #2 — 0.002 USDC for market data</div>
+        <div><span class="text-violet-400">[x402]</span> Voucher #1 — 0.002 USDC · 50-byte Ed25519 signed</div>
+        <div><span class="text-violet-400">[x402]</span> Voucher #2 — 0.002 USDC · cumulative watermark advanced</div>
         <div class="text-zinc-600">... 18 more vouchers ...</div>
         <div><span class="text-amber-400">[Stock]</span> BUY 0.0109 AAPL @ $228.50</div>
-        <div><span class="text-emerald-500">[Settle]</span> Channel closed — claimed 0.0400 USDC, refunded 4.9600 USDC</div>
+        <div><span class="text-emerald-500">[Settle]</span> Ed25519 precompile → settle → distribute · claimed 0.0400 USDC</div>
         <div><span class="text-blue-400">[Reputation]</span> DataOracle +0.05 → 1.05 | Alpha +0.02 → 1.02</div>
       </div>
     </section>
 
-    <!-- Why rare -->
     <section class="bg-gradient-to-br from-emerald-950/40 to-zinc-900 border border-emerald-900/50 rounded-xl p-6">
       <h2 class="text-sm font-medium text-emerald-400 uppercase tracking-wider mb-3">Why judges should care</h2>
       <ul class="space-y-2 text-sm text-zinc-300">
-        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Uses the actual Payment Channels primitive (not 1-tx-per-payment)</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Uses the official Payment Channels program (CHNLxYvV...) live on mainnet</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Canonical 50-byte voucher format + Ed25519 signing</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Real A2A economy — agents pay each other autonomously</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Stocknized Agent that can fund the payment layer</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Hard spending ceilings + reputation before channel open</li>
-        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Designed for the exact Agentic Payments + Clawpump bounties</li>
       </ul>
+      <div class="mt-4 pt-4 border-t border-emerald-900/40 flex gap-4 text-xs">
+        <a href="https://github.com/wadezigh96/ChannelSwarm-Agent" class="text-emerald-400 hover:underline">GitHub Repo →</a>
+        <a href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" class="text-cyan-400 hover:underline">Program on Explorer →</a>
+      </div>
     </section>
 
   </main>
@@ -137,7 +145,6 @@
       { name: 'DataOracle', role: 'data', rep: 1.05, color: 'cyan' },
       { name: 'StockHunter', role: 'stock', rep: 1.00, color: 'amber' },
     ];
-
     const grid = document.getElementById('agents-grid');
     agents.forEach(a => {
       grid.innerHTML += `
