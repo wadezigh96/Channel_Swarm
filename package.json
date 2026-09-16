@@ -1,7 +1,7 @@
 {
   "name": "channel-swarm-agent",
-  "version": "0.2.0",
-  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons — Payment Channels, A2A micropayments, tokenized equities",
+  "version": "0.3.0",
+  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons — real Payment Channels program integration",
   "type": "module",
   "scripts": {
     "demo": "tsx examples/demo-swarm.ts",
@@ -29,6 +29,7 @@
     "@solana/spl-token": "^0.4.9",
     "bs58": "^6.0.0",
     "dotenv": "^16.4.5",
+    "tweetnacl": "^1.0.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
