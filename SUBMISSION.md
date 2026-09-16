@@ -1,4 +1,4 @@
-# Hackathon Submission — ChannelSwarm (copy-paste ready)
+# Hackathon Submission — ChannelSwarm
 
 ## Project Name
 ChannelSwarm
