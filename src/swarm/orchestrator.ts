@@ -47,18 +47,21 @@ export class SwarmOrchestrator {
       this.stockAgent = new StocknizedAgent(this.connection, kp);
     }
 
-    console.log(`[Swarm] Agent ${name} (${role}) online — ${kp.publicKey.toBase58().slice(0, 8)}...`);
+    console.log(
+      `[Swarm] Agent ${name} (${role}) online — ${kp.publicKey.toBase58().slice(0, 8)}...`
+    );
     return agent;
   }
 
   /**
-   * Core demo loop: agents open channels, buy services from each other,
-   * stock agent trades, then everything settles.
+   * Core demo loop shown to judges:
+   * open channel → high-frequency vouchers → stock trade → settle → reputation
    */
   async runDemoCycle() {
     if (this.agents.length < 2) throw new Error("Need at least 2 agents");
 
-    const [alpha, dataAgent] = this.agents;
+    const alpha = this.agents.find((a) => a.role === "general") ?? this.agents[0];
+    const dataAgent = this.agents.find((a) => a.role === "data") ?? this.agents[1];
     const cmAlpha = this.channelManagers.get(alpha.name)!;
 
     // 1. Open Payment Channel
@@ -67,25 +70,28 @@ export class SwarmOrchestrator {
       ceilingUsdc: 5.0,
     });
 
-    // 2. High-frequency micropayments (simulate 20 data requests)
+    // 2. High-frequency micropayments (simulate 20 data/API requests)
+    console.log(`[x402] Starting high-frequency voucher stream...`);
     for (let i = 1; i <= 20; i++) {
       await cmAlpha.createVoucher(channelId, 0.002); // $0.002 per call
-      // In real system this would be an HTTP 402 → pay → get data
     }
 
     // 3. Stocknized Agent runs its strategy
     if (this.stockAgent) {
+      console.log(`[Stock] Stocknized Agent executing strategy...`);
       await this.stockAgent.runStrategy();
     }
 
     // 4. Settle the channel (one on-chain tx in production)
     const { claimed, refunded } = await cmAlpha.settle(channelId);
 
-    // 5. Update reputation based on successful settlement
+    // 5. Local reputation bump (full registry is in demo)
     dataAgent.reputation += 0.05;
     alpha.reputation += 0.02;
 
-    console.log(`[Reputation] ${dataAgent.name}: ${dataAgent.reputation.toFixed(2)} | ${alpha.name}: ${alpha.reputation.toFixed(2)}`);
+    console.log(
+      `[Reputation] ${dataAgent.name}: ${dataAgent.reputation.toFixed(2)} | ${alpha.name}: ${alpha.reputation.toFixed(2)}`
+    );
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
 
     return { claimed, refunded };

@@ -1,10 +1,11 @@
 {
   "name": "channel-swarm-agent",
-  "version": "0.1.0",
-  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons",
+  "version": "0.2.0",
+  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons — Payment Channels, A2A micropayments, tokenized equities",
   "type": "module",
   "scripts": {
     "demo": "tsx examples/demo-swarm.ts",
+    "dashboard": "npx serve dashboard -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "test": "tsx --test src/**/*.test.ts"
@@ -18,7 +19,8 @@
     "stocknized",
     "clawpump",
     "meteora",
-    "hackathon"
+    "hackathon",
+    "a2a"
   ],
   "author": "wadezigh96",
   "license": "MIT",
