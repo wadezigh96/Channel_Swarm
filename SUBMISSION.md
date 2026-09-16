@@ -1,59 +1,51 @@
-# Hackathon Submission Text (copy-paste ready)
+# Hackathon Submission — ChannelSwarm (copy-paste ready)
 
 ## Project Name
 ChannelSwarm
 
 ## Tagline
-Autonomous multi-agent economy on Solana using Payment Channels + x402 + Stocknized Agents
+Autonomous multi-agent economy on Solana using official Payment Channels + A2A micropayments + Stocknized Agents
 
-## Short Description (for card / list)
-ChannelSwarm is the first agent swarm that opens real Payment Channels, performs high-frequency A2A micropayments, and runs a Stocknized Agent that trades tokenized equities — then recycles profits into more channel capacity. Built for the Agentic Payments track and the Stocknized Agent on Clawpump bounty.
+## Short Description (card / list)
+ChannelSwarm is a multi-agent swarm that opens real Solana Payment Channels, runs high-frequency agent-to-agent micropayments with canonical 50-byte Ed25519 vouchers, and includes a Stocknized Agent that trades tokenized equities — recycling profits into more channel capacity.
 
 ## Full Description
 
-### The Problem
-Most AI agents on Solana still pay with one transaction per action. That model cannot scale to the agent economy (millions of micropayments per day). Existing agents also lack a real economic loop between agents and almost never touch tokenized real-world assets.
+### Problem
+Most AI agents still pay with one on-chain transaction per action. That cannot scale to millions of micropayments. Few agents form a real agent-to-agent economy, and almost none connect payments to tokenized equities (RWA).
 
-### Our Solution
-ChannelSwarm introduces three rare capabilities in one system:
+### Solution
+ChannelSwarm combines three rare capabilities:
 
-1. **True Payment Channels**  
-   Agents open a channel once (escrow a spending ceiling), sign off-chain vouchers for every request, and settle only once. This is the exact primitive Solana launched for 1M+ payments per second.
+1. **Official Payment Channels** — Uses the live Solana Foundation program `CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX`. Agents escrow a ceiling once, sign off-chain vouchers, and settle in a single transaction (the 1M+ payments/sec primitive).
 
-2. **Agent-to-Agent (A2A) Marketplace**  
-   Specialized agents (Data Oracle, Stock Hunter, General) buy services from each other using channels. No human approval required.
+2. **A2A marketplace** — Specialized agents (General, Data Oracle, Stock Hunter) pay each other autonomously via channels. Reputation scores gate channel opens; hard spending ceilings prevent runaway spend.
 
-3. **Stocknized Agent**  
-   A dedicated agent that analyzes and trades tokenized stocks (AAPL, TSLA, NVDA style synthetics). Profits are recycled to fund new Payment Channels, creating a self-sustaining economic loop.
+3. **Stocknized Agent** — Trades tokenized equities and recycles profits into new Payment Channel capacity — a self-funding loop between RWA and agentic payments.
 
-4. **Reputation + Hard Spending Controls**  
-   Every agent has a reputation score that other agents check before opening a channel. Daily and per-call ceilings prevent runaway spending.
+### Why this is differentiated
+- Real mainnet Payment Channels program ID (not a mock)
+- Canonical 50-byte voucher wire format + Ed25519 signing
+- Agent-to-agent economy with reputation
+- Stocknized / RWA agent funding the payment layer
 
-### Why This Is Rare
-No other public project currently combines:
-- Official Payment Channels pattern
-- High-frequency A2A micropayments
-- Stocknized / RWA agent
-- Self-funding loop via equity trading
-
-in a single working swarm.
-
-### Demo
+### How to run
 ```bash
-git clone https://github.com/wadezigh96/ChannelSwarm-Agent.git
-cd ChannelSwarm-Agent
+git clone https://github.com/wadezigh96/Swarm_Agent.git
+cd Swarm_Agent
 npm install && npm run demo
 ```
-Then open `dashboard/index.html` for the visual view.
 
-### Links
-- GitHub: https://github.com/wadezigh96/ChannelSwarm-Agent
-- Demo video: (record a 60–90s screen capture of `npm run demo` + dashboard)
+### Links (paste into form)
+- **GitHub:** https://github.com/wadezigh96/Swarm_Agent
+- **Live dashboard:** https://wadezigh96.github.io/Swarm_Agent/index.html
+- **Payment Channels program (Explorer):** https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
+- **Demo video:** (add your 60–90s Loom/YouTube link)
 
-### Tracks
-- Agentic Payments (primary)
-- Stocknized Agent on Clawpump (bounty)
-- Stocklana main track
+### Tracks to select
+1. **Stocklana Main** (primary — deadline ~18 Sep 2026, 4pm ET)
+2. **Stocknized Agent / Clawpump-related bounty** (if listed)
+3. Register interest for **Agentic Payments** when the track goes live
 
 ### Team
-Solo builder
+Solo
