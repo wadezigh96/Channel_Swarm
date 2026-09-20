@@ -25,7 +25,7 @@
       </div>
       <div class="flex items-center gap-3">
         <a href="https://github.com/wadezigh96/Swarm_Agent" target="_blank" class="text-xs text-zinc-400 hover:text-white transition">GitHub</a>
-        <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">● LIVE DEMO</span>
+        <span class="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-medium border border-amber-500/20">● DEMO SNAPSHOT</span>
       </div>
     </div>
   </header>
@@ -46,7 +46,7 @@
         <p class="text-3xl font-semibold text-emerald-400">3</p>
       </div>
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-        <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Open Channels</p>
+        <p class="text-zinc-500 text-xs uppercase tracking-wider mb-1">Demo Channel</p>
         <p class="text-3xl font-semibold">1</p>
       </div>
       <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
@@ -73,7 +73,7 @@
           <div class="flex justify-between"><span class="text-zinc-500">Ceiling</span><span class="text-emerald-400 font-medium">5.00 USDC</span></div>
           <div class="flex justify-between"><span class="text-zinc-500">Spent (vouchers)</span><span>0.04 USDC</span></div>
           <div class="flex justify-between"><span class="text-zinc-500">Voucher format</span><span class="text-violet-400">50-byte Ed25519</span></div>
-          <div class="flex justify-between"><span class="text-zinc-500">Status</span><span class="text-amber-400">Open → Settle ready</span></div>
+          <div class="flex justify-between"><span class="text-zinc-500">Status</span><span class="text-amber-400">Simulation snapshot</span></div>
           <div class="mt-4 pt-4 border-t border-zinc-800">
             <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
               <div class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full" style="width: 0.8%"></div>
@@ -86,7 +86,7 @@
       <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
         <h2 class="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">Stocknized Portfolio</h2>
         <div class="space-y-1" id="portfolio"></div>
-        <p class="text-xs text-zinc-500 pt-3 border-t border-zinc-800 mt-3">Profits from tokenized equity trades recycle into new Payment Channel capacity — a self-funding loop.</p>
+        <p class="text-xs text-zinc-500 pt-3 border-t border-zinc-800 mt-3">Paper-trading snapshot for the demo. Real tokenized-equity execution is not wired into the current build.</p>
         <div class="flex justify-between text-xs mt-2">
           <span class="text-zinc-500">Portfolio value</span>
           <span class="text-emerald-400 font-medium" id="portfolio-value">—</span>
@@ -114,10 +114,10 @@
     <section class="bg-gradient-to-br from-emerald-950/40 to-zinc-900 border border-emerald-900/50 rounded-xl p-6">
       <h2 class="text-sm font-medium text-emerald-400 uppercase tracking-wider mb-3">Why judges should care</h2>
       <ul class="space-y-2 text-sm text-zinc-300">
-        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Uses the official Payment Channels program (CHNLxYvV...) live on mainnet</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Uses the official Payment Channels program (CHNLxYvV...)</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Canonical 50-byte voucher format + Ed25519 signing</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Real A2A economy — agents pay each other autonomously</li>
-        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Stocknized portfolio (AAPL · TSLA · NVDA · MSFT) funds payment layer</li>
+        <li class="flex gap-2"><span class="text-emerald-400">✓</span> Stocknized paper portfolio (AAPL · TSLA · NVDA · MSFT) demonstrates the funding-loop concept</li>
         <li class="flex gap-2"><span class="text-emerald-400">✓</span> Hard spending ceilings + reputation before channel open</li>
       </ul>
       <div class="mt-4 pt-4 border-t border-emerald-900/40 flex gap-4 text-xs">
