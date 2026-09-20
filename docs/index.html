@@ -1,104 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ChannelSwarm — Agent Economy on Solana</title>
-<meta name="description" content="ChannelSwarm — Solana Payment Channels, agentic micropayments, x402-style vouchers and Stocknized paper trading.">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHANNELSWARM · Autonomous Agent Economy</title>
+<meta name="description" content="ChannelSwarm — Solana agent economy powered by Payment Channels, signed micropayments and reputation.">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-:root{color-scheme:dark}*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#050505}
-.mono{font-family:'JetBrains Mono',monospace}.grid-bg{background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:32px 32px}
-.glass{background:rgba(15,15,15,.78);backdrop-filter:blur(14px)}.card{border:1px solid #242424;border-radius:18px}.accent{background:linear-gradient(135deg,#22c55e,#06b6d4)}
+*{box-sizing:border-box}body{margin:0;background:#070707;color:#f4f4f5;font-family:Inter,system-ui,sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}.shell{max-width:1180px;margin:auto;padding:0 28px}.nav{height:78px;border-bottom:1px solid #242424;display:flex;align-items:center;justify-content:space-between;background:rgba(7,7,7,.9);backdrop-filter:blur(14px);position:sticky;top:0;z-index:20}
+.brandWrap{display:flex;align-items:center;gap:11px}.brandMark{width:36px;height:36px;border:1px solid #3b3b3b;border-radius:10px;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,#e5e5e5,#555);color:#090909}.brand{font-size:15px;font-weight:800;letter-spacing:.08em}.brandSub{font-size:9px;color:#686868;letter-spacing:.12em;margin-top:2px}
+.navRight{display:flex;align-items:center;gap:12px}.live{font:10px 'JetBrains Mono';color:#7dd3a8;letter-spacing:.06em}.live span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;margin-right:6px}.navBtn{border:1px solid #343434;background:#111;color:#ddd;border-radius:9px;padding:10px 14px;font-size:11px}
+.hero{display:grid;grid-template-columns:1.5fr .8fr;gap:45px;padding:75px 0 52px;border-bottom:1px solid #202020}.eyebrow{font:10px 'JetBrains Mono';color:#777;letter-spacing:.13em;margin-bottom:18px}.eyebrow span{display:inline-block;width:7px;height:7px;background:#a3e635;border-radius:50%;margin-right:8px}
+h1{font-size:clamp(42px,6vw,72px);line-height:1.02;letter-spacing:-.055em;margin:0;max-width:790px}h1 em{font-style:normal;color:#a3e635} .hero p{color:#858585;max-width:650px;font-size:15px;line-height:1.8;margin:22px 0 0}.heroPanel{align-self:end;border:1px solid #292929;background:#0c0c0c;border-radius:16px;padding:22px}.panelLabel,.kicker{font:9px 'JetBrains Mono';letter-spacing:.14em;color:#666}.system{display:flex;align-items:center;gap:9px;margin:18px 0 8px;font-size:14px}.pulse{width:8px;height:8px;border-radius:50%;background:#a3e635;box-shadow:0 0 16px #a3e635}.systemMeta{font-size:11px;color:#666;line-height:1.6}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#252525;border:1px solid #252525;margin:28px 0}.metric{background:#0b0b0b;padding:20px}.metric span{display:block;font:9px 'JetBrains Mono';color:#666;letter-spacing:.12em}.metric strong{display:block;font-size:23px;margin-top:8px}.metric small{display:block;color:#555;font-size:10px;margin-top:4px}
+.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-bottom:18px}.card{border:1px solid #272727;background:#0c0c0c;border-radius:16px;padding:25px}.head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px}.head h2{margin:6px 0 0;font-size:19px;letter-spacing:-.02em}.tag{font:9px 'JetBrains Mono';color:#777;border:1px solid #303030;border-radius:7px;padding:6px 8px}.muted{color:#686868;font-size:12px;line-height:1.7}
+.agentGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.agent{border:1px solid #252525;background:#090909;border-radius:12px;padding:16px}.agentTop{display:flex;justify-content:space-between}.agentName{font-size:13px;font-weight:700}.agentRole{font:9px 'JetBrains Mono';color:#555}.bar{height:4px;background:#202020;border-radius:5px;margin-top:22px}.bar i{display:block;height:100%;border-radius:5px;background:#a3e635}.rep{display:flex;justify-content:space-between;margin-top:8px;font:9px 'JetBrains Mono';color:#666}.rep b{color:#a3e635;font-weight:500}
+.rows{display:grid;gap:0}.row{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid #1d1d1d;font-size:12px}.row:last-child{border:0}.row span{color:#666}.row b{font-weight:600}.green{color:#a3e635}.cyan{color:#67e8f9}
+.flow{display:grid;gap:9px}.flowStep{display:flex;gap:12px;align-items:center;border:1px solid #202020;background:#090909;border-radius:10px;padding:11px}.num{width:23px;height:23px;border-radius:7px;background:#171717;color:#a3e635;display:grid;place-items:center;font:10px 'JetBrains Mono'}.flowStep span{font-size:11px;color:#bbb}.flowStep small{display:block;color:#555;font-size:9px;margin-top:3px}
+.log{font:10px/2 'JetBrains Mono';color:#666;background:#080808;border:1px solid #1e1e1e;border-radius:10px;padding:14px;overflow:auto}.log b{color:#a3e635;font-weight:500}.log .x{color:#c084fc}.log .s{color:#67e8f9}.log .a{color:#fbbf24}
+.portfolio{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stock{border:1px solid #232323;border-radius:10px;padding:13px;background:#090909}.stock b{font-size:12px}.stock span{display:block;color:#555;font:9px 'JetBrains Mono';margin-top:7px}
+.program{border:1px solid #38451f;background:linear-gradient(135deg,rgba(163,230,53,.06),#0b0b0b);display:flex;align-items:center;justify-content:space-between;gap:20px}.programId{font:10px 'JetBrains Mono';color:#777;word-break:break-all;margin-top:8px}.button{display:inline-block;border:1px solid #4b5b27;color:#c4ef73;border-radius:9px;padding:10px 13px;font-size:10px;white-space:nowrap;text-decoration:none}
+footer{border-top:1px solid #202020;padding:30px 0 45px;margin-top:45px;color:#4f4f4f;font:9px 'JetBrains Mono';display:flex;justify-content:space-between}
+@media(max-width:800px){.shell{padding:0 16px}.hero{grid-template-columns:1fr;padding:48px 0 36px}.heroPanel{display:none}.metrics{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.agentGrid,.portfolio{grid-template-columns:1fr 1fr}.navRight .live{display:none}h1{font-size:45px}}
 </style>
 </head>
-<body class="text-zinc-100 min-h-screen grid-bg">
-<header class="sticky top-0 z-20 border-b border-zinc-800/80 glass">
-<div class="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
-<a href="#" class="flex items-center gap-3">
-<div class="w-10 h-10 rounded-xl accent text-black flex items-center justify-center font-extrabold">CS</div>
-<div><div class="font-bold tracking-tight">ChannelSwarm</div><div class="text-[11px] text-zinc-500 mono">SOLANA · AGENT ECONOMY</div></div>
-</a>
-<div class="flex items-center gap-3">
-<span class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-xs"><span>●</span> SIMULATION READY</span>
-<a href="https://github.com/wadezigh96/Swarm_Agent" target="_blank" class="px-3 py-1.5 rounded-lg border border-zinc-700 text-xs hover:border-zinc-500 transition">GitHub ↗</a>
+<body>
+<div class="shell">
+<nav class="nav"><div class="brandWrap"><div class="brandMark">S</div><div><div class="brand">CHANNELSWARM</div><div class="brandSub">AUTONOMOUS AGENT ECONOMY</div></div></div><div class="navRight"><div class="live"><span></span>SOLANA · READY</div><a class="navBtn" href="https://github.com/wadezigh96/Swarm_Agent" target="_blank">VIEW REPO ↗</a></div></nav>
+<section class="hero"><div><div class="eyebrow"><span></span>PAYMENT CHANNELS · A2A · X402-STYLE</div><h1>Agents that can <em>earn, spend</em><br>and settle together.</h1><p>ChannelSwarm is a Solana-native agent economy built around signed micropayments, Payment Channels, reputation gates and controlled spending. This dashboard shows the working simulation flow.</p></div><div class="heroPanel"><div class="panelLabel">SWARM CONTROL PLANE</div><div class="system"><span class="pulse"></span><strong>Agent network operational</strong></div><div class="systemMeta">Simulation-first · Ed25519 vouchers · Reputation-gated channels</div></div></section>
+<section class="metrics"><div class="metric"><span>AGENTS</span><strong>03</strong><small>Online in demo</small></div><div class="metric"><span>CHANNEL</span><strong>01</strong><small>Payment channel</small></div><div class="metric"><span>MICROPAYMENTS</span><strong>20</strong><small>Voucher events</small></div><div class="metric"><span>SETTLED</span><strong>0.04</strong><small>USDC demo amount</small></div></section>
+<div class="grid"><section class="card"><div class="head"><div><div class="kicker">01 · SWARM NETWORK</div><h2>Agent roster</h2></div><span class="tag">REPUTATION GATED</span></div><div class="agentGrid"><div class="agent"><div class="agentTop"><span class="agentName">Alpha</span><span class="agentRole">GENERAL</span></div><div class="bar"><i style="width:51%"></i></div><div class="rep"><span>REPUTATION</span><b>1.02</b></div></div><div class="agent"><div class="agentTop"><span class="agentName">DataOracle</span><span class="agentRole">DATA</span></div><div class="bar"><i style="width:52.5%"></i></div><div class="rep"><span>REPUTATION</span><b>1.05</b></div></div><div class="agent"><div class="agentTop"><span class="agentName">StockHunter</span><span class="agentRole">STOCK</span></div><div class="bar"><i style="width:50%"></i></div><div class="rep"><span>REPUTATION</span><b>1.00</b></div></div></div></section>
+<section class="card"><div class="head"><div><div class="kicker">02 · PAYMENT CHANNEL</div><h2>Channel state</h2></div><span class="tag">SIMULATION</span></div><div class="rows"><div class="row"><span>Ceiling</span><b>5.00 USDC</b></div><div class="row"><span>Spent</span><b class="green">0.04 USDC</b></div><div class="row"><span>Voucher</span><b class="cyan">50-byte</b></div><div class="row"><span>Signature</span><b>Ed25519</b></div><div class="row"><span>Replay guard</span><b>Enabled</b></div></div></section></div>
+<div class="grid"><section class="card"><div class="head"><div><div class="kicker">03 · PAYMENT PIPELINE</div><h2>x402-style voucher flow</h2></div><span class="tag">VERIFIED</span></div><div class="flow"><div class="flowStep"><div class="num">01</div><div><span>Payment required</span><small>Resource responds with payment requirement</small></div></div><div class="flowStep"><div class="num">02</div><div><span>Ed25519 signature verified</span><small>Signed voucher is checked against the payer</small></div></div><div class="flowStep"><div class="num">03</div><div><span>Channel constraints checked</span><small>PDA, ceiling and expiry are validated</small></div></div><div class="flowStep"><div class="num">04</div><div><span>Replay protection</span><small>Cumulative watermark rejects stale vouchers</small></div></div><div class="flowStep"><div class="num">05</div><div><span>Resource access</span><small>Valid payment returns the protected resource</small></div></div></div></section>
+<section class="card"><div class="head"><div><div class="kicker">04 · STOCKNIZED</div><h2>Paper portfolio</h2></div><span class="tag">DEMO DATA</span></div><div class="portfolio"><div class="stock"><b>AAPL</b><span>0.0109 · $228.50</span></div><div class="stock"><b>TSLA</b><span>0.0101 · $248.20</span></div><div class="stock"><b>NVDA</b><span>0.0189 · $132.40</span></div><div class="stock"><b>MSFT</b><span>0.0059 · $425.10</span></div></div><p class="muted" style="margin-top:18px">Paper-trading snapshot only. Real tokenized-equity settlement is not wired into the current build.</p></section></div>
+<section class="card"><div class="head"><div><div class="kicker">05 · OPERATIONS</div><h2>Execution trace</h2></div><span class="tag">DEMO LOG</span></div><div class="log"><div><b>[SWARM]</b> 3 agents online</div><div><span class="s">[CHANNEL]</span> Alpha → DataOracle · ceiling 5 USDC</div><div><span class="x">[X402]</span> voucher #01 · 0.002 USDC · signed</div><div><span class="x">[X402]</span> voucher #02 · cumulative watermark advanced</div><div style="color:#3d3d3d">... 18 more vouchers ...</div><div><span class="a">[STOCK]</span> paper trades → AAPL · TSLA · NVDA · MSFT</div><div><b>[SETTLE]</b> Ed25519 precompile → settle → distribute</div><div><span class="s">[REPUTATION]</span> DataOracle 1.05 · Alpha 1.02</div></div></section>
+<section class="card program"><div><div class="kicker" style="color:#9bbf5a">06 · SOLANA PROGRAM</div><h2 style="margin:6px 0 0;font-size:20px">Payment Channels integration</h2><div class="programId">CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX</div></div><a class="button" href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" target="_blank">OPEN EXPLORER ↗</a></section>
+<footer><span>CHANNELSWARM · SOLANA · MIT</span><span>Agentic payments with explicit spending controls.</span></footer>
 </div>
-</div>
-</header>
-<main class="max-w-7xl mx-auto px-5 sm:px-8 py-10 space-y-8">
-<section class="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/80 p-7 sm:p-10">
-<div class="absolute -right-20 -top-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl"></div>
-<div class="max-w-3xl relative">
-<div class="inline-flex items-center gap-2 text-xs text-emerald-400 mono mb-5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> PAYMENT CHANNELS · A2A · X402-STYLE</div>
-<h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.05]">An economy where<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">agents can pay agents.</span></h1>
-<p class="mt-5 text-zinc-400 text-base sm:text-lg max-w-2xl leading-7">ChannelSwarm demonstrates signed micropayments over Solana Payment Channels, reputation-gated agents, spending ceilings and a Stocknized paper-trading layer.</p>
-<div class="flex flex-wrap gap-3 mt-7">
-<a href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" target="_blank" class="px-4 py-2.5 rounded-xl accent text-black text-sm font-semibold">View Program ↗</a>
-<a href="https://github.com/wadezigh96/Swarm_Agent/blob/main/SUBMISSION.md" target="_blank" class="px-4 py-2.5 rounded-xl border border-zinc-700 hover:border-zinc-500 text-sm font-semibold">Submission</a>
-</div>
-</div>
-</section>
-
-<section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-<div class="card bg-zinc-900/80 p-5"><div class="text-2xl sm:text-3xl font-bold">03</div><div class="text-sm text-zinc-300 mt-1">Agents</div><div class="text-[10px] mono uppercase text-zinc-600 mt-2">online</div></div><div class="card bg-zinc-900/80 p-5"><div class="text-2xl sm:text-3xl font-bold">01</div><div class="text-sm text-zinc-300 mt-1">Demo channel</div><div class="text-[10px] mono uppercase text-zinc-600 mt-2">active</div></div><div class="card bg-zinc-900/80 p-5"><div class="text-2xl sm:text-3xl font-bold">20</div><div class="text-sm text-zinc-300 mt-1">Micropayments</div><div class="text-[10px] mono uppercase text-zinc-600 mt-2">simulated</div></div><div class="card bg-zinc-900/80 p-5"><div class="text-2xl sm:text-3xl font-bold">0.04</div><div class="text-sm text-zinc-300 mt-1">USDC</div><div class="text-[10px] mono uppercase text-zinc-600 mt-2">settled</div></div>
-</section>
-
-<section class="grid lg:grid-cols-3 gap-5">
-<div class="card bg-zinc-900/80 p-6 lg:col-span-2">
-<div class="flex items-center justify-between mb-6"><div><div class="text-xs mono text-zinc-500">SWARM</div><h2 class="text-xl font-bold mt-1">Agent Network</h2></div><span class="text-xs text-zinc-500">reputation gated</span></div>
-<div class="grid sm:grid-cols-3 gap-3" id="agents"></div>
-</div>
-<div class="card bg-zinc-900/80 p-6">
-<div class="text-xs mono text-zinc-500">PAYMENT CHANNEL</div><h2 class="text-xl font-bold mt-1 mb-5">Channel State</h2>
-<div class="space-y-4 text-sm">
-<div class="flex justify-between"><span class="text-zinc-500">Ceiling</span><b>5.00 USDC</b></div>
-<div class="flex justify-between"><span class="text-zinc-500">Spent</span><b class="text-emerald-400">0.04 USDC</b></div>
-<div class="flex justify-between"><span class="text-zinc-500">Voucher</span><b class="text-cyan-400">50-byte</b></div>
-<div class="flex justify-between"><span class="text-zinc-500">Signature</span><b>Ed25519</b></div>
-<div class="pt-3 border-t border-zinc-800"><div class="h-2 bg-zinc-800 rounded-full"><div class="h-full rounded-full accent" style="width:.8%"></div></div><div class="text-[11px] text-zinc-500 mt-2">0.8% capacity consumed</div></div>
-</div></div>
-</section>
-
-<section class="grid lg:grid-cols-2 gap-5">
-<div class="card bg-zinc-900/80 p-6">
-<div class="flex justify-between items-start mb-5"><div><div class="text-xs mono text-zinc-500">X402-STYLE</div><h2 class="text-xl font-bold mt-1">Payment Pipeline</h2></div><span class="px-2 py-1 rounded-md bg-violet-500/10 text-violet-400 text-[10px] mono">VERIFIED</span></div>
-<div class="space-y-3">
-<div class="flex gap-3 items-center"><span class="w-6 h-6 rounded-full bg-zinc-800 text-xs flex items-center justify-center text-emerald-400">1</span><span class="text-sm text-zinc-300">Payment required → x-payment header</span></div><div class="flex gap-3 items-center"><span class="w-6 h-6 rounded-full bg-zinc-800 text-xs flex items-center justify-center text-emerald-400">2</span><span class="text-sm text-zinc-300">Ed25519 signature verified</span></div><div class="flex gap-3 items-center"><span class="w-6 h-6 rounded-full bg-zinc-800 text-xs flex items-center justify-center text-emerald-400">3</span><span class="text-sm text-zinc-300">Channel PDA + ceiling checked</span></div><div class="flex gap-3 items-center"><span class="w-6 h-6 rounded-full bg-zinc-800 text-xs flex items-center justify-center text-emerald-400">4</span><span class="text-sm text-zinc-300">Expiry + replay protection</span></div><div class="flex gap-3 items-center"><span class="w-6 h-6 rounded-full bg-zinc-800 text-xs flex items-center justify-center text-emerald-400">5</span><span class="text-sm text-zinc-300">Resource access → 200 OK</span></div>
-</div></div>
-<div class="card bg-zinc-900/80 p-6">
-<div class="text-xs mono text-zinc-500">STOCKNIZED</div><h2 class="text-xl font-bold mt-1 mb-4">Paper Portfolio</h2><div id="portfolio" class="space-y-2"></div>
-<p class="text-[11px] text-zinc-600 mt-4 pt-4 border-t border-zinc-800">Demo quotes only. Real tokenized-equity settlement is not wired into this build.</p>
-</div>
-</section>
-
-<section class="card bg-zinc-900/80 p-6">
-<div class="flex items-center justify-between mb-4"><div><div class="text-xs mono text-zinc-500">LIVE DEMO LOG</div><h2 class="text-xl font-bold mt-1">Execution Trace</h2></div><span class="text-[10px] mono text-zinc-600">SIMULATION</span></div>
-<div class="mono text-xs leading-7 text-zinc-400 overflow-x-auto">
-<div><span class="text-emerald-400">[SWARM]</span> 3 agents online</div>
-<div><span class="text-cyan-400">[CHANNEL]</span> Alpha → DataOracle · ceiling 5 USDC</div>
-<div><span class="text-violet-400">[X402]</span> voucher #01 · 0.002 USDC · signed</div>
-<div><span class="text-violet-400">[X402]</span> voucher #02 · cumulative watermark advanced</div>
-<div><span class="text-zinc-600">... 18 more vouchers ...</span></div>
-<div><span class="text-amber-400">[STOCK]</span> paper trades → AAPL · TSLA · NVDA · MSFT</div>
-<div><span class="text-emerald-400">[SETTLE]</span> Ed25519 precompile → settle → distribute</div>
-<div><span class="text-blue-400">[REPUTATION]</span> DataOracle 1.05 · Alpha 1.02</div>
-</div>
-</section>
-
-<section class="card border-emerald-900/60 bg-gradient-to-br from-emerald-950/30 to-zinc-950 p-6 sm:p-8">
-<div class="grid md:grid-cols-3 gap-6 items-center">
-<div class="md:col-span-2"><div class="text-xs mono text-emerald-400">PROGRAM</div><h2 class="text-2xl font-bold mt-1">Built around Solana Payment Channels</h2><p class="text-sm text-zinc-400 mt-2 mono break-all">CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX</p></div>
-<a href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" target="_blank" class="justify-self-start px-4 py-2.5 rounded-xl border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/10">Open Explorer ↗</a>
-</div>
-</section>
-</main>
-<footer class="max-w-7xl mx-auto px-5 sm:px-8 py-8 text-xs text-zinc-600 flex flex-col sm:flex-row justify-between gap-2"><span>ChannelSwarm · MIT License</span><span>Solana · Agentic Payments · 2026</span></footer>
-<script>
-const agents=[["Alpha","general","1.02","emerald"],["DataOracle","data","1.05","cyan"],["StockHunter","stock","1.00","amber"]];
-document.getElementById("agents").innerHTML=agents.map(a=>`<div class="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"><div class="flex justify-between"><b>${a[0]}</b><span class="text-[10px] mono text-zinc-600">${a[1]}</span></div><div class="flex items-center gap-2 mt-5"><div class="h-1.5 flex-1 rounded-full bg-zinc-800"><div class="h-full rounded-full bg-${a[3]}-400" style="width:${Math.min(Number(a[2])*50,100)}%"></div></div><span class="text-xs text-${a[3]}-400 mono">${a[2]}</span></div></div>`).join("");
-const holdings=[["AAPL","$228.50",".0109"],["TSLA","$248.20",".0101"],["NVDA","$132.40",".0189"],["MSFT","$425.10",".0059"]];
-document.getElementById("portfolio").innerHTML=holdings.map(h=>`<div class="flex justify-between items-center py-2 border-b border-zinc-800 last:border-0"><div><b class="text-sm">${h[0]}</b><span class="text-xs text-zinc-600 ml-2">${h[2]} units</span></div><span class="text-sm mono">${h[1]}</span></div>`).join("");
-</script>
-</body>
-</html>
+</body></html>
