@@ -89,7 +89,7 @@ test("settleAndSeal instruction uses discriminator 4 and voucher flag", () => {
 
 
 test("x402 payment header decodes and verifies", async () => {
-  const { decodePaymentHeader, verifyPayment } = await import("../../examples/x402-demo.js");
+  const { decodePaymentHeader, verifyPayment } = await import("./x402-server.js");
   const payer = Keypair.generate();
   const message = new Uint8Array(50);
   message.set(VOUCHER_MAGIC, 0);
@@ -103,7 +103,7 @@ test("x402 payment header decodes and verifies", async () => {
 
 
 test("x402 payment verification rejects insufficient payment and replay", async () => {
-  const { createX402DemoServer } = await import("../../examples/x402-demo.js");
+  const { createX402DemoServer } = await import("./x402-server.js");
   const payer = Keypair.generate();
   const payee = Keypair.generate();
   const connection = { getSlot: async () => 1 } as any;
