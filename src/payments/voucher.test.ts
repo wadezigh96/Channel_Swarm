@@ -7,7 +7,7 @@ import {
   VOUCHER_MAGIC,
   VOUCHER_SIZE,
 } from "./channel-manager.js";
-import { encodeOpenData } from "./instructions.js";
+import { encodeOpenData, buildSettleAndSealInstruction } from "./instructions.js";
 
 test("official program id matches mainnet", () => {
   assert.equal(
@@ -72,4 +72,17 @@ test("pda seeds are deterministic", () => {
     PAYMENT_CHANNELS_PROGRAM_ID
   );
   assert.equal(a.toBase58(), b.toBase58());
+});
+
+
+test("settleAndSeal instruction uses discriminator 4 and voucher flag", () => {
+  const channel = Keypair.generate().publicKey;
+  const payee = Keypair.generate().publicKey;
+
+  const withVoucher = buildSettleAndSealInstruction(payee, channel, true);
+  const withoutVoucher = buildSettleAndSealInstruction(payee, channel, false);
+  assert.equal(withVoucher.data[0], 4);
+  assert.equal(withVoucher.data[1], 1);
+  assert.equal(withoutVoucher.data[0], 4);
+  assert.equal(withoutVoucher.data[1], 0);
 });
