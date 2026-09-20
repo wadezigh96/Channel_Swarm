@@ -15,11 +15,7 @@ const manager = new ChannelManager({
   usdcMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 });
 
-const channelIdPromise = manager.openChannel({
-  counterparty: payee.publicKey,
-  ceilingUsdc: 1,
-  salt: 402n,
-});
+const channelIdPromise = (async () => {\n  const channelId = await manager.openChannel({\n    counterparty: payee.publicKey,\n    ceilingUsdc: 1,\n    salt: 402n,\n  });\n  await manager.createVoucher(channelId, PRICE_USDC);\n  return channelId;\n})();
 
 function json(res: any, status: number, body: unknown) {
   res.writeHead(status, { "content-type": "application/json" });
