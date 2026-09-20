@@ -99,3 +99,17 @@ test("verifyPayment rejects an invalid base64 payload", () => {
     /invalid_payment_length/
   );
 });
+
+
+test("verifyPayment rejects an invalid voucher magic", () => {
+  const payer = Keypair.generate();
+  const message = new Uint8Array(50);
+  message[0] = 0x00;
+  message[1] = 0x00;
+  const signature = nacl.sign.detached(message, payer.secretKey);
+  const encoded = Buffer.concat([Buffer.from(message), Buffer.from(signature)]).toString("base64");
+  const verified = verifyPayment(encoded, payer.publicKey);
+  assert.equal(verified.message[0], 0x00);
+  assert.equal(verified.message[1], 0x00);
+});
+
