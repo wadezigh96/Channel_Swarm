@@ -100,3 +100,34 @@ test("x402 payment header decodes and verifies", async () => {
   assert.equal(decoded.signature.length, 64);
   verifyPayment(header, payer.publicKey);
 });
+
+
+test("x402 payment verification rejects insufficient payment and replay", async () => {
+  const { createX402DemoServer } = await import("../../examples/x402-demo.js");
+  const payer = Keypair.generate();
+  const payee = Keypair.generate();
+  const connection = { getSlot: async () => 1 } as any;
+  const { ChannelManager } = await import("./channel-manager.js");
+  const manager = new ChannelManager({
+    connection,
+    payer,
+    usdcMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
+  });
+  const channelId = await manager.openChannel({ counterparty: payee.publicKey, ceilingUsdc: 1, salt: 403n });
+  const voucher = await manager.createVoucher(channelId, 0.001);
+  const header = Buffer.concat([Buffer.from(voucher.message), Buffer.from(voucher.signature)]).toString("base64");
+  const server = createX402DemoServer(manager, channelId, payer, 0.002);
+  const port = 4199;
+  await new Promise<void>((resolve) => server.listen(port, resolve));
+  const insufficient = await fetch("http://127.0.0.1:" + port + "/resource", { headers: { "x-payment": header } });
+  assert.equal(insufficient.status, 402);
+  await manager.createVoucher(channelId, 0.002);
+  const fresh = await manager.getVoucher(channelId);
+  assert.ok(fresh);
+  const freshHeader = Buffer.concat([Buffer.from(fresh!.message), Buffer.from(fresh!.signature)]).toString("base64");
+  const accepted = await fetch("http://127.0.0.1:" + port + "/resource", { headers: { "x-payment": freshHeader } });
+  assert.equal(accepted.status, 200);
+  const replay = await fetch("http://127.0.0.1:" + port + "/resource", { headers: { "x-payment": freshHeader } });
+  assert.equal(replay.status, 402);
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+});
