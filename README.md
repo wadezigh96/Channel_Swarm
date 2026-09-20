@@ -49,37 +49,44 @@ It combines:
 
 ## 🔄 How it works
 
-```text
-                         CHANNELSWARM
+**Intent → Reputation → Payment Channel → Voucher → Agent Resource → Settlement**
 
-     ┌──────────────┐
-     │ Alpha Agent  │
-     │    Payer     │
-     └──────┬───────┘
-            │ open channel
-            ▼
- ┌─────────────────────────┐
- │ Solana Payment Channels │
- │ CHNLxYvVA28MJP9...      │
- └────────────┬────────────┘
-              │
-        signed vouchers
-              │
-     ┌────────▼────────┐
-     │  Agent Swarm    │
-     │ Oracle / Trader │
-     └────────┬────────┘
-              │
-      x402-style HTTP
-              │
-              ▼
-       ┌─────────────┐
-       │  Resource   │
-       │   Server    │
-       └─────────────┘
+```mermaid
+flowchart TB
+    subgraph ChannelSwarm["ChannelSwarm Runtime"]
+        U["Agent intent / task"] --> O["Swarm Orchestrator"]
+        O --> REP["Reputation Registry"]
+        REP -->|allowed| CM["Channel Manager"]
+        REP -->|blocked| X["Reject / explain"]
+
+        CM --> OPEN["Open Payment Channel"]
+        OPEN --> PC["Solana Payment Channels"]
+        PC --> V["50-byte Ed25519 voucher"]
+
+        V --> A["Agent-to-Agent resource"]
+        A --> X402["x402-style HTTP"]
+        X402 --> SET["Settle / SettleAndSeal"]
+        SET --> PC
+
+        O --> STOCK["Stocknized Agent"]
+        STOCK --> PAPER["Paper portfolio"]
+        PAPER --> O
+    end
+
+    SOL["Solana wallet / funded payer"] -.->|SOL + USDC| PC
+    USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
----
+### Runtime layers
+
+| Layer | Responsibility |
+|---|---|
+| **Swarm Orchestrator** | Coordinates the agents and demo lifecycle |
+| **Reputation** | Controls participation using agent scores |
+| **Channel Manager** | Creates channels, vouchers and settlement paths |
+| **Payment Channels** | Solana on-chain settlement primitive |
+| **x402-style HTTP** | Payment-required resource flow using signed vouchers |
+| **Stocknized Agent** | Paper-trading strategy and simulated portfolio |
 
 ## 💸 Payment Channel
 
