@@ -15,7 +15,10 @@ Uses the **live mainnet program** from [solana-foundation/payment-channels](http
 | `open` / `settle` / `settleAndSeal` / `requestClose` builders | Implemented (ADR-003 wire format) |
 | Demo cycle (agents → vouchers → stock → reputation) | Works in **sim** mode |
 | Live on-chain `open` + `settle` | Built; sends only if `ONCHAIN=true` **and** payer has SOL + USDC |
-| Stocknized trades | Paper / mock quotes |
+| `settleAndSeal` lifecycle path | Implemented + instruction-tested |
+| Automated CI (`npm test` + `npm run build`) | Implemented |
+| Stocknized trades | Paper / mock quotes — no real equity settlement yet |
+| HTTP x402 server | Not yet implemented; current vouchers are x402-style primitives |
 
 Without a funded wallet the demo **falls back to simulation** instead of sending a doomed transaction.
 
@@ -43,7 +46,7 @@ ONCHAIN=true npm run demo
 ```
 Alpha (payer)  --open channel-->  Payment Channels program
                --20 vouchers-->   off-chain Ed25519 (x402-style)
-StockHunter    --paper trades-->  tokenized equity book
+StockHunter    --paper trades-->  simulated equity book
 Alpha          --settle-------->  Ed25519 precompile + settle ix
 Reputation     --gates open---->  min score 0.5
 ```
@@ -65,3 +68,13 @@ docs/                             # GitHub Pages dashboard
 ## License
 
 MIT · Built for Solana Hackathons 2026
+
+
+## What is still intentionally open
+
+- **Real tokenized-equity execution:** the Stocknized agent currently uses deterministic demo prices and an in-memory paper portfolio. No real stock/RWA transaction is claimed.
+- **HTTP x402 transport:** the payment layer implements the signed voucher primitive and channel settlement path, but there is not yet an HTTP middleware/server that enforces x402 payments end-to-end.
+- **Production persistence:** reputation and channel state are in memory for the demo.
+- **Mainnet funding:** on-chain execution remains opt-in and requires a funded payer; the default demo stays in simulation mode.
+
+The repository now has automated CI that runs the test suite and TypeScript build on pushes and pull requests to `main`.
