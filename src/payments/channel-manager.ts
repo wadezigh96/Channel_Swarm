@@ -1,63 +1,75 @@
 /**
- * ChannelManager — Real Payment Channels integration for Agentic Payments
+ * ChannelManager — Official Payment Channels client wrapper
  *
  * Program (mainnet live):
  *   CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
- *   https://github.com/solana-foundation/payment-channels
  *
- * Voucher wire format (50 bytes, Ed25519-signed):
- *   0..2   magic [0x56, 0x01]
- *   2..34  channel_id (32 bytes PDA)
- *   34..42 cumulative_amount (u64 LE)
- *   42..50 expires_at (i64 LE, 0 = no expiry)
- *
- * Lifecycle: open → off-chain vouchers → settle (Ed25519 precompile) → distribute/refund
- *
- * This module implements the full state machine client-side.
- * For production on-chain calls, use the official generated TypeScript client
- * from solana-foundation/payment-channels or @solana/pay-kit.
+ * Modes:
+ *   sim     — local state machine + signed 50-byte vouchers (default)
+ *   onchain — builds + sends real open / settle txs when funded
  */
 
 import {
   Connection,
   Keypair,
   PublicKey,
-  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
 } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, getAccount } from "@solana/spl-token";
 import nacl from "tweetnacl";
+import {
+  buildOpenInstruction,
+  buildSettleInstruction,
+  buildEd25519VoucherIx,
+  buildRequestCloseInstruction,
+} from "./instructions.js";
 
-/** Official Payment Channels program ID (mainnet) */
 export const PAYMENT_CHANNELS_PROGRAM_ID = new PublicKey(
   "CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX"
 );
 
 export const CHANNEL_SEED = Buffer.from("channel");
-export const VOUCHER_MAGIC = new Uint8Array([0x56, 0x01]); // 'V' + version 1
+export const VOUCHER_MAGIC = new Uint8Array([0x56, 0x01]);
 export const VOUCHER_SIZE = 50;
+export const DEFAULT_GRACE_PERIOD = 900;
 
 export interface ChannelConfig {
   connection: Connection;
   payer: Keypair;
   usdcMint: PublicKey;
-  /** Defaults to official mainnet program */
   programId?: PublicKey;
+  onchain?: boolean;
 }
 
 export interface OpenChannelParams {
-  counterparty: PublicKey; // payee
+  counterparty: PublicKey;
   ceilingUsdc: number;
   expirySeconds?: number;
   salt?: bigint;
+  gracePeriod?: number;
 }
 
 export interface Voucher {
   channelId: string;
   channelPda: PublicKey;
-  cumulativeAmount: bigint; // micro-USDC
+  cumulativeAmount: bigint;
   expiresAt: bigint;
-  message: Uint8Array; // 50-byte canonical message
-  signature: Uint8Array; // Ed25519
+  message: Uint8Array;
+  signature: Uint8Array;
   timestamp: number;
+}
+
+export interface OpenedChannel {
+  ceiling: bigint;
+  spent: bigint;
+  counterparty: PublicKey;
+  channelPda: PublicKey;
+  salt: bigint;
+  openSlot: number;
+  lastVoucher?: Voucher;
+  signature?: string;
+  mode: "sim" | "onchain";
 }
 
 export class ChannelManager {
@@ -65,35 +77,23 @@ export class ChannelManager {
   private payer: Keypair;
   private usdcMint: PublicKey;
   private programId: PublicKey;
-  private openChannels = new Map<
-    string,
-    {
-      ceiling: bigint;
-      spent: bigint;
-      counterparty: PublicKey;
-      channelPda: PublicKey;
-      salt: bigint;
-      openSlot: number;
-    }
-  >();
+  private onchain: boolean;
+  private openChannels = new Map<string, OpenedChannel>();
 
   constructor(config: ChannelConfig) {
     this.connection = config.connection;
     this.payer = config.payer;
     this.usdcMint = config.usdcMint;
     this.programId = config.programId ?? PAYMENT_CHANNELS_PROGRAM_ID;
+    this.onchain = Boolean(config.onchain);
   }
 
-  /**
-   * Derive channel PDA per official program:
-   * seeds = ["channel", payer, payee, mint, authorized_signer, salt, open_slot]
-   */
-  async deriveChannelPda(
+  deriveChannelPda(
     payee: PublicKey,
     salt: bigint,
     openSlot: number,
     authorizedSigner: PublicKey = this.payer.publicKey
-  ): Promise<[PublicKey, number]> {
+  ): [PublicKey, number] {
     const saltBuf = Buffer.alloc(8);
     saltBuf.writeBigUInt64LE(salt);
     const slotBuf = Buffer.alloc(8);
@@ -113,26 +113,43 @@ export class ChannelManager {
     );
   }
 
-  /**
-   * Open a Payment Channel.
-   * In production this builds the real `open` instruction and sends it.
-   * Demo mode tracks state locally while documenting the real program path.
-   */
   async openChannel(params: OpenChannelParams): Promise<string> {
     const salt = params.salt ?? BigInt(Date.now());
     const openSlot = await this.connection.getSlot("confirmed");
-    const [channelPda] = await this.deriveChannelPda(
-      params.counterparty,
-      salt,
-      openSlot
-    );
-
+    const [channelPda] = this.deriveChannelPda(params.counterparty, salt, openSlot);
     const channelId = channelPda.toBase58();
     const ceiling = BigInt(Math.floor(params.ceilingUsdc * 1_000_000));
 
-    // Production path (commented — requires USDC + real open ix):
-    // const ix = buildOpenInstruction({ programId, payer, payee, mint, deposit: ceiling, salt, openSlot, ... })
-    // await sendAndConfirmTransaction(connection, new Transaction().add(ix), [payer])
+    let signature: string | undefined;
+    let mode: "sim" | "onchain" = "sim";
+
+    if (this.onchain) {
+      const funded = await this.hasUsdc(ceiling);
+      if (!funded.ok) {
+        console.warn(`[Channel] ONCHAIN requested but ${funded.reason} — falling back to sim`);
+      } else {
+        const ix = buildOpenInstruction({
+          payer: this.payer.publicKey,
+          rentPayer: this.payer.publicKey,
+          payee: params.counterparty,
+          mint: this.usdcMint,
+          authorizedSigner: this.payer.publicKey,
+          channel: channelPda,
+          salt,
+          deposit: ceiling,
+          gracePeriod: params.gracePeriod ?? DEFAULT_GRACE_PERIOD,
+          openSlot: BigInt(openSlot),
+          recipients: [],
+          programId: this.programId,
+        });
+        const tx = new Transaction().add(ix);
+        signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
+          commitment: "confirmed",
+        });
+        mode = "onchain";
+        console.log(`[Channel] On-chain open tx: ${signature}`);
+      }
+    }
 
     this.openChannels.set(channelId, {
       ceiling,
@@ -141,21 +158,19 @@ export class ChannelManager {
       channelPda,
       salt,
       openSlot,
+      signature,
+      mode,
     });
 
     console.log(
-      `[Channel] Opened ${channelId.slice(0, 12)}... (program ${this.programId.toBase58().slice(0, 8)}...) ceiling ${params.ceilingUsdc} USDC → ${params.counterparty.toBase58().slice(0, 8)}...`
+      `[Channel] Opened ${channelId.slice(0, 12)}... mode=${mode} ceiling ${params.ceilingUsdc} USDC → ${params.counterparty.toBase58().slice(0, 8)}...`
     );
     console.log(
-      `[Channel] Real program: https://explorer.solana.com/address/${PAYMENT_CHANNELS_PROGRAM_ID.toBase58()}`
+      `[Channel] Program: https://explorer.solana.com/address/${this.programId.toBase58()}`
     );
     return channelId;
   }
 
-  /**
-   * Build the canonical 50-byte voucher message and sign it with Ed25519.
-   * This is the exact format the on-chain program verifies via the Ed25519 precompile.
-   */
   createVoucherMessage(
     channelPda: PublicKey,
     cumulativeAmount: bigint,
@@ -164,20 +179,13 @@ export class ChannelManager {
     const msg = new Uint8Array(VOUCHER_SIZE);
     msg.set(VOUCHER_MAGIC, 0);
     msg.set(channelPda.toBytes(), 2);
-
     const amountView = new DataView(msg.buffer, 34, 8);
-    amountView.setBigUint64(0, cumulativeAmount, true); // little-endian
-
+    amountView.setBigUint64(0, cumulativeAmount, true);
     const expiryView = new DataView(msg.buffer, 42, 8);
     expiryView.setBigInt64(0, expiresAt, true);
-
     return msg;
   }
 
-  /**
-   * Create an off-chain voucher (signed authorization) for a micropayment.
-   * High-frequency path — zero on-chain cost until settle.
-   */
   async createVoucher(channelId: string, amountUsdc: number): Promise<Voucher> {
     const channel = this.openChannels.get(channelId);
     if (!channel) throw new Error(`Channel ${channelId} not found`);
@@ -192,8 +200,6 @@ export class ChannelManager {
     const signature = nacl.sign.detached(message, this.payer.secretKey);
 
     channel.spent = newSpent;
-    this.openChannels.set(channelId, channel);
-
     const voucher: Voucher = {
       channelId,
       channelPda: channel.channelPda,
@@ -203,38 +209,79 @@ export class ChannelManager {
       signature,
       timestamp: Date.now(),
     };
+    channel.lastVoucher = voucher;
+    this.openChannels.set(channelId, channel);
 
     console.log(
-      `[x402/Channel] Voucher signed — +${amountUsdc} USDC (cumulative ${Number(newSpent) / 1e6}) | 50-byte wire format`
+      `[x402/Channel] Voucher signed — +${amountUsdc} USDC (cumulative ${Number(newSpent) / 1e6}) | 50-byte wire`
     );
     return voucher;
   }
 
-  /**
-   * Settle the channel: claim actual usage on-chain and refund remainder.
-   * Production: Ed25519 precompile + settle ix, then distribute / withdraw_payer.
-   */
-  async settle(channelId: string): Promise<{ claimed: number; refunded: number }> {
+  async settle(channelId: string): Promise<{ claimed: number; refunded: number; signature?: string }> {
     const channel = this.openChannels.get(channelId);
     if (!channel) throw new Error(`Channel ${channelId} not found`);
 
     const claimed = Number(channel.spent) / 1_000_000;
     const refunded = Number(channel.ceiling - channel.spent) / 1_000_000;
+    let signature: string | undefined;
 
-    // Production path:
-    // 1. Include Ed25519SigVerify instruction with the final voucher
-    // 2. Call settle (or settle_and_seal)
-    // 3. Call distribute to pay payee + refund payer + close escrow
-
-    console.log(
-      `[Settle] Channel ${channelId.slice(0, 12)}... → claimed ${claimed.toFixed(4)} USDC, refunded ${refunded.toFixed(4)} USDC`
-    );
-    console.log(
-      `[Settle] On-chain path: Ed25519 precompile → settle → distribute (program ${this.programId.toBase58().slice(0, 8)}...)`
-    );
+    if (this.onchain && channel.mode === "onchain" && channel.lastVoucher) {
+      const ed = buildEd25519VoucherIx(
+        this.payer.publicKey,
+        channel.lastVoucher.message,
+        channel.lastVoucher.signature
+      );
+      const settleIx = buildSettleInstruction(channel.channelPda, this.programId);
+      const tx = new Transaction().add(ed, settleIx);
+      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
+        commitment: "confirmed",
+      });
+      console.log(`[Settle] On-chain settle tx: ${signature}`);
+    } else {
+      console.log(
+        `[Settle] ${channel.mode} path — claimed ${claimed.toFixed(4)} USDC, refunded ${refunded.toFixed(4)} USDC`
+      );
+    }
 
     this.openChannels.delete(channelId);
-    return { claimed, refunded };
+    return { claimed, refunded, signature };
+  }
+
+  async requestClose(channelId: string): Promise<string | undefined> {
+    const channel = this.openChannels.get(channelId);
+    if (!channel) throw new Error(`Channel ${channelId} not found`);
+    if (!(this.onchain && channel.mode === "onchain")) return undefined;
+
+    const ix = buildRequestCloseInstruction(
+      this.payer.publicKey,
+      channel.channelPda,
+      this.programId
+    );
+    const tx = new Transaction().add(ix);
+    return sendAndConfirmTransaction(this.connection, tx, [this.payer], {
+      commitment: "confirmed",
+    });
+  }
+
+  private async hasUsdc(needed: bigint): Promise<{ ok: boolean; reason?: string }> {
+    try {
+      const ata = getAssociatedTokenAddressSync(this.usdcMint, this.payer.publicKey);
+      const acc = await getAccount(this.connection, ata);
+      if (acc.amount < needed) {
+        return {
+          ok: false,
+          reason: `USDC ATA has ${Number(acc.amount) / 1e6}, need ${Number(needed) / 1e6}`,
+        };
+      }
+      const sol = await this.connection.getBalance(this.payer.publicKey);
+      if (sol < 50_000) {
+        return { ok: false, reason: `payer has only ${sol} lamports for fees` };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: "payer USDC ATA missing" };
+    }
   }
 
   getChannelState(channelId: string) {
@@ -243,5 +290,9 @@ export class ChannelManager {
 
   getProgramId() {
     return this.programId;
+  }
+
+  isOnchain() {
+    return this.onchain;
   }
 }
