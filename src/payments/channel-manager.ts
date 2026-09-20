@@ -21,6 +21,7 @@ import nacl from "tweetnacl";
 import {
   buildOpenInstruction,
   buildSettleInstruction,
+  buildSettleAndSealInstruction,
   buildEd25519VoucherIx,
   buildRequestCloseInstruction,
 } from "./instructions.js";
