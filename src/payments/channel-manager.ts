@@ -285,7 +285,7 @@ export class ChannelManager {
     return { claimed, refunded, signature };
   }
 
-  async requestClose(channelId: string): Promise<string | undefined> {
+  async getVoucher(channelId: string): Promise<Voucher | undefined> {\n    return this.openChannels.get(channelId)?.lastVoucher;\n  }\n\n  async requestClose(channelId: string): Promise<string | undefined> {
     const channel = this.openChannels.get(channelId);
     if (!channel) throw new Error(`Channel ${channelId} not found`);
     if (!(this.onchain && channel.mode === "onchain")) return undefined;
