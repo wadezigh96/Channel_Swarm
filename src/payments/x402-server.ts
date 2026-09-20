@@ -1,7 +1,7 @@
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import nacl from "tweetnacl";
-import type { ChannelManager } from "./channel-manager.js";
+import { VOUCHER_MAGIC, type ChannelManager } from "./channel-manager.js";
 
 export interface X402PaymentRequirement {
   scheme: "channel-voucher";
@@ -81,6 +81,9 @@ export function createX402DemoServer(
       if (!channel) throw new Error("channel_not_found");
 
       const message = verified.message;
+      if (message[0] !== VOUCHER_MAGIC[0] || message[1] !== VOUCHER_MAGIC[1]) {
+        throw new Error("invalid_voucher_magic");
+      }
       const messageChannel = new PublicKey(message.slice(2, 34));
       if (!messageChannel.equals(channel.channelPda)) {
         throw new Error("wrong_channel");
@@ -95,7 +98,7 @@ export function createX402DemoServer(
       if (cumulativeUnits > channel.ceiling) {
         throw new Error("channel_ceiling_exceeded");
       }
-      if (expiresAt !== 0n && BigInt(Math.floor(Date.now() / 1000)) > expiresAt) {
+      if (expiresAt !== 0n && BigInt(Math.floor(Date.now() / 1000)) >= expiresAt) {
         throw new Error("voucher_expired");
       }
       if (cumulativeUsdc < priceUsdc) {
