@@ -18,7 +18,7 @@ Uses the **live mainnet program** from [solana-foundation/payment-channels](http
 | `settleAndSeal` lifecycle path | Implemented + instruction-tested |
 | Automated CI (`npm test` + `npm run build`) | Implemented |
 | Stocknized trades | Paper / mock quotes — no real equity settlement yet |
-| HTTP x402 server | Not yet implemented; current vouchers are x402-style primitives |
+| HTTP x402-style server | Implemented + tested locally; not claimed as full production x402 compatibility |
 
 Without a funded wallet the demo **falls back to simulation** instead of sending a doomed transaction.
 
@@ -73,7 +73,7 @@ MIT · Built for Solana Hackathons 2026
 ## What is still intentionally open
 
 - **Real tokenized-equity execution:** the Stocknized agent currently uses deterministic demo prices and an in-memory paper portfolio. No real stock/RWA transaction is claimed.
-- **HTTP x402 transport:** the payment layer implements the signed voucher primitive and channel settlement path, but there is not yet an HTTP middleware/server that enforces x402 payments end-to-end.
+- **HTTP x402 transport:** a local HTTP x402-style server now enforces signed channel vouchers, price, channel ceiling, expiry, and replay protection. It is a demo transport, not a claim of full production x402 compatibility.
 - **Production persistence:** reputation and channel state are in memory for the demo.
 - **Mainnet funding:** on-chain execution remains opt-in and requires a funded payer; the default demo stays in simulation mode.
 
