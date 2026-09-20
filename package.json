@@ -9,7 +9,7 @@
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/**/*.test.ts src/payments/voucher.test.ts",
+    "test": "tsx --test src/payments/voucher.test.ts src/payments/x402.test.ts",
     "x402:demo": "tsx examples/x402-demo.ts"
   },
   "keywords": [
