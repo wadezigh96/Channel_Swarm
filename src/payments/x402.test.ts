@@ -90,3 +90,12 @@ test("x402 payment header has the expected base64 wire length", () => {
   assert.equal(Buffer.from(encoded, "base64").length, 114);
   assert.equal(new PublicKey(payer.publicKey).toBase58(), payer.publicKey.toBase58());
 });
+
+
+test("verifyPayment rejects an invalid base64 payload", () => {
+  const payer = Keypair.generate();
+  assert.throws(
+    () => verifyPayment("not-a-valid-payment", payer.publicKey),
+    /invalid_payment_length/
+  );
+});
