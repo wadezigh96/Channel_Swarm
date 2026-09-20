@@ -11,3 +11,5 @@ export { StocknizedAgent } from "./stock/stocknized-agent.js";
 export { SwarmOrchestrator } from "./swarm/orchestrator.js";
 export { ReputationRegistry } from "./reputation/reputation.js";
 export { loadPayerFromEnv, isOnchainMode } from "./wallet.js";
+
+export type { Voucher, OpenedChannel, ChannelConfig, OpenChannelParams } from "./payments/channel-manager.js";
