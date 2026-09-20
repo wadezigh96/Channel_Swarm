@@ -1,5 +1,5 @@
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
-import { PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import nacl from "tweetnacl";
 import type { ChannelManager } from "./channel-manager.js";
 
@@ -49,7 +49,9 @@ export function sendJson(res: ServerResponse, status: number, body: unknown, hea
   res.end(JSON.stringify(body));
 }
 
-export function createX402DemoServer(manager: ChannelManager, channelId: string, payer: Keypair, priceUsdc: number) {\n  let highestCumulativeUsdc = 0;\n  let acceptedPayments = 0;
+export function createX402DemoServer(manager: ChannelManager, channelId: string, payer: Keypair, priceUsdc: number) {
+  let highestCumulativeUsdc = 0;
+  let acceptedPayments = 0;
   return createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.url !== "/resource" || req.method !== "GET") {
       sendJson(res, 404, { error: "not_found" });
@@ -78,11 +80,18 @@ export function createX402DemoServer(manager: ChannelManager, channelId: string,
         throw new Error("insufficient_payment");
       }
 
-      if (cumulativeUsdc <= highestCumulativeUsdc) {\n        throw new Error("replayed_or_stale_voucher");\n      }\n      highestCumulativeUsdc = cumulativeUsdc;\n      acceptedPayments += 1;\n\n      sendJson(res, 200, {
+      if (cumulativeUsdc <= highestCumulativeUsdc) {
+        throw new Error("replayed_or_stale_voucher");
+      }
+      highestCumulativeUsdc = cumulativeUsdc;
+      acceptedPayments += 1;
+
+      sendJson(res, 200, {
         ok: true,
         paid: true,
         scheme: "channel-voucher",
         cumulativeUsdc,
+        acceptedPayments,
       });
     } catch (error) {
       sendJson(res, 402, {
