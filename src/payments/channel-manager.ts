@@ -248,6 +248,42 @@ export class ChannelManager {
     return { claimed, refunded, signature };
   }
 
+  async settleAndSeal(channelId: string): Promise<{ claimed: number; refunded: number; signature?: string }> {
+    const channel = this.openChannels.get(channelId);
+    if (!channel) throw new Error(`Channel ${channelId} not found`);
+
+    const claimed = Number(channel.spent) / 1_000_000;
+    const refunded = Number(channel.ceiling - channel.spent) / 1_000_000;
+    let signature: string | undefined;
+
+    if (this.onchain && channel.mode === "onchain") {
+      const voucher = channel.lastVoucher;
+      const ed = voucher
+        ? buildEd25519VoucherIx(this.payer.publicKey, voucher.message, voucher.signature)
+        : undefined;
+      const settleAndSealIx = buildSettleAndSealInstruction(
+        this.payer.publicKey,
+        channel.channelPda,
+        Boolean(voucher),
+        this.programId
+      );
+      const tx = new Transaction();
+      if (ed) tx.add(ed);
+      tx.add(settleAndSealIx);
+      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
+        commitment: "confirmed",
+      });
+      console.log(`[SettleAndSeal] On-chain tx: ${signature}`);
+    } else {
+      console.log(
+        `[SettleAndSeal] ${channel.mode} path — claimed ${claimed.toFixed(4)} USDC, refunded ${refunded.toFixed(4)} USDC`
+      );
+    }
+
+    this.openChannels.delete(channelId);
+    return { claimed, refunded, signature };
+  }
+
   async requestClose(channelId: string): Promise<string | undefined> {
     const channel = this.openChannels.get(channelId);
     if (!channel) throw new Error(`Channel ${channelId} not found`);
