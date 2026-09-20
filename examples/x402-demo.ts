@@ -111,7 +111,7 @@ async function main() {
   });
   const firstVoucher = await manager.createVoucher(channelId, PRICE_USDC);
 
-  const server = createX402DemoServer(manager, channelId, payer, PRICE_USDC);\n  console.log(`[x402] issued voucher cumulative=${Number(firstVoucher.cumulativeAmount) / 1e6} USDC`);
+  const server = createX402DemoServer(manager, channelId, payer, PRICE_USDC);\n  console.log(`[x402] issued voucher cumulative=${Number(firstVoucher.cumulativeAmount) / 1e6} USDC`);\n  console.log("[x402] Demo accepts increasing cumulative vouchers and rejects replay/stale vouchers.");
   server.listen(PORT, () => {
     console.log(`[x402] demo resource: http://localhost:${PORT}/resource`);
     console.log("[x402] Missing x-payment returns 402; valid signed voucher returns 200.");
