@@ -86,3 +86,17 @@ test("settleAndSeal instruction uses discriminator 4 and voucher flag", () => {
   assert.equal(withoutVoucher.data[0], 4);
   assert.equal(withoutVoucher.data[1], 0);
 });
+
+
+test("x402 payment header decodes and verifies", async () => {
+  const { decodePaymentHeader, verifyPayment } = await import("../../examples/x402-demo.js");
+  const payer = Keypair.generate();
+  const message = new Uint8Array(50);
+  message.set(VOUCHER_MAGIC, 0);
+  const signature = nacl.sign.detached(message, payer.secretKey);
+  const header = Buffer.concat([Buffer.from(message), Buffer.from(signature)]).toString("base64");
+  const decoded = decodePaymentHeader(header);
+  assert.equal(decoded.message.length, 50);
+  assert.equal(decoded.signature.length, 64);
+  verifyPayment(header, payer.publicKey);
+});
