@@ -1,6 +1,5 @@
 /**
- * Swarm Orchestrator — Runs multiple specialized agents that pay each other
- * via Payment Channels and fund themselves with Stocknized trading.
+ * Swarm Orchestrator — specialized agents pay each other via Payment Channels.
  */
 
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
@@ -20,10 +19,12 @@ export class SwarmOrchestrator {
   private channelManagers = new Map<string, ChannelManager>();
   private stockAgent: StocknizedAgent | null = null;
   private usdcMint: PublicKey;
+  private onchain: boolean;
 
-  constructor(connection: Connection, usdcMint: PublicKey) {
+  constructor(connection: Connection, usdcMint: PublicKey, onchain = false) {
     this.connection = connection;
     this.usdcMint = usdcMint;
+    this.onchain = onchain;
   }
 
   addAgent(name: string, role: AgentIdentity["role"], keypair?: Keypair) {
@@ -40,6 +41,7 @@ export class SwarmOrchestrator {
       connection: this.connection,
       payer: kp,
       usdcMint: this.usdcMint,
+      onchain: this.onchain && role === "general",
     });
     this.channelManagers.set(name, cm);
 
@@ -53,39 +55,30 @@ export class SwarmOrchestrator {
     return agent;
   }
 
-  /**
-   * Core demo loop shown to judges:
-   * open channel → high-frequency vouchers → stock trade → settle → reputation
-   */
-  async runDemoCycle() {
+  async runDemoCycle(voucherCount = 20, perVoucherUsdc = 0.002) {
     if (this.agents.length < 2) throw new Error("Need at least 2 agents");
 
     const alpha = this.agents.find((a) => a.role === "general") ?? this.agents[0];
     const dataAgent = this.agents.find((a) => a.role === "data") ?? this.agents[1];
     const cmAlpha = this.channelManagers.get(alpha.name)!;
 
-    // 1. Open Payment Channel
     const channelId = await cmAlpha.openChannel({
       counterparty: dataAgent.keypair.publicKey,
       ceilingUsdc: 5.0,
     });
 
-    // 2. High-frequency micropayments (simulate 20 data/API requests)
-    console.log(`[x402] Starting high-frequency voucher stream...`);
-    for (let i = 1; i <= 20; i++) {
-      await cmAlpha.createVoucher(channelId, 0.002); // $0.002 per call
+    console.log(`[x402] Starting high-frequency voucher stream (${voucherCount})...`);
+    for (let i = 1; i <= voucherCount; i++) {
+      await cmAlpha.createVoucher(channelId, perVoucherUsdc);
     }
 
-    // 3. Stocknized Agent runs its strategy
     if (this.stockAgent) {
       console.log(`[Stock] Stocknized Agent executing strategy...`);
       await this.stockAgent.runStrategy();
     }
 
-    // 4. Settle the channel (one on-chain tx in production)
-    const { claimed, refunded } = await cmAlpha.settle(channelId);
+    const { claimed, refunded, signature } = await cmAlpha.settle(channelId);
 
-    // 5. Local reputation bump (full registry is in demo)
     dataAgent.reputation += 0.05;
     alpha.reputation += 0.02;
 
@@ -93,8 +86,9 @@ export class SwarmOrchestrator {
       `[Reputation] ${dataAgent.name}: ${dataAgent.reputation.toFixed(2)} | ${alpha.name}: ${alpha.reputation.toFixed(2)}`
     );
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
+    if (signature) console.log(`[Swarm] Settle signature: ${signature}`);
 
-    return { claimed, refunded };
+    return { claimed, refunded, signature, channelId };
   }
 
   listAgents() {

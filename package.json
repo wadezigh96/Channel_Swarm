@@ -1,14 +1,15 @@
 {
   "name": "channel-swarm-agent",
-  "version": "0.3.0",
-  "description": "Rarest Agentic Payments + Stocknized Agent for Solana Hackathons — real Payment Channels program integration",
+  "version": "0.4.0",
+  "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent",
   "type": "module",
   "scripts": {
     "demo": "tsx examples/demo-swarm.ts",
-    "dashboard": "npx serve dashboard -p 3000",
+    "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
+    "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/**/*.test.ts src/payments/voucher.test.ts"
   },
   "keywords": [
     "solana",
@@ -17,9 +18,6 @@
     "payment-channels",
     "ai-agent",
     "stocknized",
-    "clawpump",
-    "meteora",
-    "hackathon",
     "a2a"
   ],
   "author": "wadezigh96",
