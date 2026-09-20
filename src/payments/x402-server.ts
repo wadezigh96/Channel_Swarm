@@ -49,9 +49,15 @@ export function sendJson(res: ServerResponse, status: number, body: unknown, hea
   res.end(JSON.stringify(body));
 }
 
-export function createX402DemoServer(manager: ChannelManager, channelId: string, payer: Keypair, priceUsdc: number) {
+export function createX402DemoServer(
+  manager: ChannelManager,
+  channelId: string,
+  payer: Keypair,
+  priceUsdc: number
+) {
   let highestCumulativeUsdc = 0;
   let acceptedPayments = 0;
+
   return createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.url !== "/resource" || req.method !== "GET") {
       sendJson(res, 404, { error: "not_found" });
@@ -71,18 +77,34 @@ export function createX402DemoServer(manager: ChannelManager, channelId: string,
 
     try {
       const verified = verifyPayment(auth, payer.publicKey);
-      const voucher = await manager.getVoucher(channelId);
-      if (!voucher || Buffer.compare(Buffer.from(voucher.message), Buffer.from(verified.message)) !== 0) {
-        throw new Error("voucher_not_issued_by_server");
+      const channel = manager.getChannelState(channelId);
+      if (!channel) throw new Error("channel_not_found");
+
+      const message = verified.message;
+      const messageChannel = new PublicKey(message.slice(2, 34));
+      if (!messageChannel.equals(channel.channelPda)) {
+        throw new Error("wrong_channel");
       }
-      const cumulativeUsdc = Number(voucher.cumulativeAmount) / 1e6;
+
+      const amountView = new DataView(message.buffer, message.byteOffset + 34, 8);
+      const expiryView = new DataView(message.buffer, message.byteOffset + 42, 8);
+      const cumulativeUnits = amountView.getBigUint64(0, true);
+      const expiresAt = expiryView.getBigInt64(0, true);
+      const cumulativeUsdc = Number(cumulativeUnits) / 1e6;
+
+      if (cumulativeUnits > channel.ceiling) {
+        throw new Error("channel_ceiling_exceeded");
+      }
+      if (expiresAt !== 0n && BigInt(Math.floor(Date.now() / 1000)) > expiresAt) {
+        throw new Error("voucher_expired");
+      }
       if (cumulativeUsdc < priceUsdc) {
         throw new Error("insufficient_payment");
       }
-
       if (cumulativeUsdc <= highestCumulativeUsdc) {
         throw new Error("replayed_or_stale_voucher");
       }
+
       highestCumulativeUsdc = cumulativeUsdc;
       acceptedPayments += 1;
 
@@ -101,5 +123,3 @@ export function createX402DemoServer(manager: ChannelManager, channelId: string,
     }
   });
 }
-
-
