@@ -7,7 +7,7 @@ ChannelSwarm
 Autonomous multi-agent economy on Solana using official Payment Channels + A2A micropayments + Stocknized Agents
 
 ## Short Description (card / list)
-ChannelSwarm is a multi-agent swarm that opens real Solana Payment Channels, runs high-frequency agent-to-agent micropayments with canonical 50-byte Ed25519 vouchers, and includes a Stocknized Agent that trades tokenized equities — recycling profits into more channel capacity.
+ChannelSwarm is a multi-agent Solana prototype that integrates the live Payment Channels program interface, runs agent-to-agent micropayments with canonical 50-byte Ed25519 vouchers in simulation mode, and includes a Stocknized Agent paper-trading layer to demonstrate how an RWA-style strategy could feed payment capacity.
 
 ## Full Description
 
@@ -19,15 +19,15 @@ ChannelSwarm combines three rare capabilities:
 
 1. **Official Payment Channels** — Uses the live Solana Foundation program `CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX`. Agents escrow a ceiling once, sign off-chain vouchers, and settle in a single transaction (the 1M+ payments/sec primitive).
 
-2. **A2A marketplace** — Specialized agents (General, Data Oracle, Stock Hunter) pay each other autonomously via channels. Reputation scores gate channel opens; hard spending ceilings prevent runaway spend.
+2. **A2A payment economy** — Specialized agents (General, Data Oracle, Stock Hunter) exchange simulated micropayments through channel vouchers. Reputation scores and hard spending ceilings provide the gating model.
 
-3. **Stocknized Agent** — Trades tokenized equities and recycles profits into new Payment Channel capacity — a self-funding loop between RWA and agentic payments.
+3. **Stocknized Agent** — Uses deterministic paper-trading quotes and an in-memory portfolio to demonstrate a possible funding loop between an RWA strategy and agentic payments. Real tokenized-equity settlement is not currently wired.
 
 ### Why this is differentiated
-- Real mainnet Payment Channels program ID (not a mock)
+- Live Solana Payment Channels program ID and compatible instruction/voucher implementation
 - Canonical 50-byte voucher wire format + Ed25519 signing
-- Agent-to-agent economy with reputation
-- Stocknized / RWA agent funding the payment layer
+- Simulated agent-to-agent payment economy with reputation and spending ceilings
+- Stocknized paper-trading layer illustrating an RWA-to-payments funding concept
 
 ### How to run
 ```bash
