@@ -49,7 +49,7 @@ export function sendJson(res: ServerResponse, status: number, body: unknown, hea
   res.end(JSON.stringify(body));
 }
 
-export function createX402DemoServer(manager: ChannelManager, channelId: string, payer: Keypair, priceUsdc: number) {
+export function createX402DemoServer(manager: ChannelManager, channelId: string, payer: Keypair, priceUsdc: number) {\n  let highestCumulativeUsdc = 0;
   return createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.url !== "/resource" || req.method !== "GET") {
       sendJson(res, 404, { error: "not_found" });
@@ -78,7 +78,7 @@ export function createX402DemoServer(manager: ChannelManager, channelId: string,
         throw new Error("insufficient_payment");
       }
 
-      sendJson(res, 200, {
+      if (cumulativeUsdc <= highestCumulativeUsdc) {\n        throw new Error("replayed_or_stale_voucher");\n      }\n      highestCumulativeUsdc = cumulativeUsdc;\n\n      sendJson(res, 200, {
         ok: true,
         paid: true,
         scheme: "channel-voucher",
