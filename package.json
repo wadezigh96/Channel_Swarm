@@ -1,11 +1,12 @@
 {
   "name": "channel-swarm-agent",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent",
   "type": "module",
   "scripts": {
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
+    "demo:equity": "tsx examples/equity-execution-demo.ts",
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
