@@ -97,8 +97,8 @@ async function signedRequest<T>(
   if (!apiKey) throw new Error("BACKPACK_API_KEY is not configured");
 
   const timestamp = Date.now();
-  const payload =
-    `instruction=${instruction}&${sortedQuery(body)}&timestamp=${timestamp}&window=${WINDOW}`;
+  const query = sortedQuery(body);
+  const payload = `instruction=${instruction}&${query ? query + "&" : ""}timestamp=${timestamp}&window=${WINDOW}`;
 
   const signature = nacl.sign.detached(
     Buffer.from(payload, "utf8"),
@@ -121,6 +121,43 @@ async function signedRequest<T>(
   if (!response.ok) {
     throw new Error(`Backpack API ${response.status}: ${text}`);
   }
+
+  return JSON.parse(text) as T;
+}
+
+async function signedGet<T>(
+  instruction: string,
+  path: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  const apiKey = process.env.BACKPACK_API_KEY;
+  if (!apiKey) throw new Error("BACKPACK_API_KEY is not configured");
+
+  const query = sortedQuery(params);
+  const timestamp = Date.now();
+  const payload = `instruction=${instruction}&${query ? query + "&" : ""}timestamp=${timestamp}&window=${WINDOW}`;
+
+  const signature = nacl.sign.detached(
+    Buffer.from(payload, "utf8"),
+    signingKeypair().secretKey
+  );
+
+  const url = new URL(`${BASE_URL}${path}`);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      "X-API-KEY": apiKey,
+      "X-SIGNATURE": Buffer.from(signature).toString("base64"),
+      "X-TIMESTAMP": String(timestamp),
+      "X-WINDOW": String(WINDOW),
+    },
+  });
+
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Backpack API ${response.status}: ${text}`);
 
   return JSON.parse(text) as T;
 }
@@ -212,35 +249,50 @@ export class BackpackStockClient {
     }
   }
 
-  /**
-   * Submit a stock RFQ without accepting a quote.
-   * This is intentionally separate from execution so a demo can prove
-   * the real RFQ path without automatically filling a trade.
-   */
+  private assertQuantity(
+    security: BackpackStockSecurity | undefined,
+    quantity: number
+  ): void {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new Error("quantity must be greater than zero");
+    }
+
+    const session = security?.sessions?.[0];
+    if (!session) return;
+
+    if (quantity < Number(session.minQuantity)) {
+      throw new Error(`Quantity below security minimum: ${session.minQuantity}`);
+    }
+
+    if (quantity > Number(session.maxQuantity)) {
+      throw new Error(`Quantity above security maximum: ${session.maxQuantity}`);
+    }
+  }
+
   async submitStockRfq(
     symbol: string,
     side: "Bid" | "Ask",
-    quantity: number
+    quantity: number,
+    notionalUsdc?: number
   ): Promise<BackpackRfq> {
     if (process.env.BACKPACK_LIVE_TRADING !== "true") {
       throw new Error("Live Backpack RFQ is disabled; set BACKPACK_LIVE_TRADING=true explicitly");
     }
 
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      throw new Error("quantity must be greater than zero");
-    }
-
     const rfqSymbol = symbol.endsWith("_RFQ") ? symbol : `${symbol}_RFQ`;
-    const baseSecurity = rfqSymbol.split("_USDC_RFQ")[0];
+    const securityAsset = rfqSymbol.replace(/_USDC_RFQ$/, "");
 
     const securities = await this.listSecurities();
     const security = securities.find(
-      (item) => item.asset === baseSecurity || item.asset === baseSecurity.split(".")[0]
+      (item) => item.asset === securityAsset || item.asset === securityAsset.split(".")[0]
     );
 
     if (!security) {
       throw new Error(`No verified Backpack security for RFQ symbol: ${rfqSymbol}`);
     }
+
+    this.assertQuantity(security, quantity);
+    if (notionalUsdc !== undefined) this.assertRisk(notionalUsdc);
 
     const body = {
       clientId: Math.floor(Math.random() * 0x7fffffff),
@@ -257,39 +309,12 @@ export class BackpackStockClient {
     return signedRequest<BackpackRfq>("rfqSubmit", "/api/v1/rfq", body);
   }
 
-  /**
-   * Read the account's open RFQs. Requires API credentials.
-   */
   async listOpenRfqs(symbol?: string): Promise<Array<{ rfq: BackpackRfq; quotes: BackpackRfqQuote[] }>> {
-    const params: Record<string, unknown> = {};
-    if (symbol) params.symbol = symbol;
-
-    const query = sortedQuery(params);
-    const path = query ? `/api/v1/rfqs?${query}` : "/api/v1/rfqs";
-
-    const apiKey = process.env.BACKPACK_API_KEY;
-    if (!apiKey) throw new Error("BACKPACK_API_KEY is not configured");
-
-    const timestamp = Date.now();
-    const payload = `instruction=rfqQuery&${query ? query + "&" : ""}timestamp=${timestamp}&window=${WINDOW}`;
-    const signature = nacl.sign.detached(
-      Buffer.from(payload, "utf8"),
-      signingKeypair().secretKey
+    return signedGet<Array<{ rfq: BackpackRfq; quotes: BackpackRfqQuote[] }>>(
+      "rfqQuery",
+      "/api/v1/rfqs",
+      symbol ? { symbol } : {}
     );
-
-    const response = await fetch(`${BASE_URL}${path}`, {
-      headers: {
-        "X-API-KEY": apiKey,
-        "X-SIGNATURE": Buffer.from(signature).toString("base64"),
-        "X-TIMESTAMP": String(timestamp),
-        "X-WINDOW": String(WINDOW),
-      },
-    });
-
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Backpack RFQs ${response.status}: ${text}`);
-
-    return JSON.parse(text) as Array<{ rfq: BackpackRfq; quotes: BackpackRfqQuote[] }>;
   }
 
   async acceptStockQuote(rfqId: string, quoteId: string): Promise<BackpackRfq> {
@@ -298,6 +323,17 @@ export class BackpackStockClient {
     }
 
     if (!rfqId || !quoteId) throw new Error("rfqId and quoteId are required");
+
+    const open = await this.listOpenRfqs();
+    const current = open.find((entry) => entry.rfq.rfqId === rfqId);
+    if (!current) throw new Error(`RFQ not open: ${rfqId}`);
+
+    const quote = current.quotes.find((item) => item.quoteId === quoteId);
+    if (!quote) throw new Error(`Quote does not belong to RFQ: ${quoteId}`);
+
+    if (quote.status && !["New", "Active"].includes(quote.status)) {
+      throw new Error(`Quote is not active: ${quote.status}`);
+    }
 
     return signedRequest<BackpackRfq>("quoteAccept", "/api/v1/rfq/accept", {
       rfqId,
