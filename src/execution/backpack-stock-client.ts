@@ -39,7 +39,6 @@ function signingKeypair(): nacl.SignKeyPair {
 }
 
 async function signedRequest<T>(
-  method: "POST",
   path: string,
   body: Record<string, unknown>
 ): Promise<T> {
@@ -54,7 +53,7 @@ async function signedRequest<T>(
   );
 
   const response = await fetch(`${BASE_URL}${path}`, {
-    method,
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": apiKey,
@@ -99,14 +98,21 @@ export class BackpackStockClient {
   async marketOrder(
     symbol: string,
     side: "Bid" | "Ask",
-    quoteQuantity: number
+    quantity: number,
+    notionalUsdc: number
   ): Promise<BackpackOrderResult> {
     if (process.env.BACKPACK_LIVE_TRADING !== "true") {
       throw new Error("Live Backpack trading is disabled; set BACKPACK_LIVE_TRADING=true explicitly");
     }
 
     const maxUsdc = Number(process.env.BACKPACK_MAX_ORDER_USDC ?? "5");
-    if (!Number.isFinite(quoteQuantity) || quoteQuantity <= 0 || quoteQuantity > maxUsdc) {
+    if (
+      !Number.isFinite(quantity) ||
+      quantity <= 0 ||
+      !Number.isFinite(notionalUsdc) ||
+      notionalUsdc <= 0 ||
+      notionalUsdc > maxUsdc
+    ) {
       throw new Error(`Order exceeds configured BACKPACK_MAX_ORDER_USDC=${maxUsdc}`);
     }
 
@@ -117,7 +123,7 @@ export class BackpackStockClient {
       symbol,
       side,
       orderType: "Market",
-      quoteQuantity: quoteQuantity.toFixed(6),
+      quantity: quantity.toFixed(8),
       timeInForce: "IOC",
       autoBorrow: false,
       autoBorrowRepay: false,
@@ -127,6 +133,6 @@ export class BackpackStockClient {
       selfTradePrevention: "RejectTaker",
     };
 
-    return signedRequest<BackpackOrderResult>("POST", "/api/v1/order", body);
+    return signedRequest<BackpackOrderResult>("/api/v1/order", body);
   }
 }
