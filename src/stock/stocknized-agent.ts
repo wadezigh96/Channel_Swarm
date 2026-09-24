@@ -1,12 +1,12 @@
 /**
- * StocknizedAgent — Specialized agent for tokenized equities on Solana.
+ * StocknizedAgent - Specialized agent for tokenized equities on Solana.
  *
  * Pyth provides the strategy price feed. Backpack provides an independently
  * verified STOCK market/security layer. Live execution remains opt-in.
  */
 
 import { Connection, Keypair } from "@solana/web3.js";
-import { getPythQuote } from "../market/pyth-client.js";
+import { getPythQuote, hasPythApiKey } from "../market/pyth-client.js";
 import { BackpackStockClient } from "../execution/backpack-stock-client.js";
 
 export interface StockQuote {
@@ -54,12 +54,18 @@ export class StocknizedAgent {
     const quote = await getPythQuote(symbol);
     const previous = this.lastPrices.get(quote.symbol);
     const changeSinceLastQuote =
-      previous && previous > 0 ? ((quote.price - previous) / previous) * 100 : undefined;
+      previous && previous > 0
+        ? ((quote.price - previous) / previous) * 100
+        : undefined;
 
     this.lastPrices.set(quote.symbol, quote.price);
 
+    // Explicit fields only - avoids excess props from PythQuote
     return {
-      ...quote,
+      symbol: quote.symbol,
+      price: quote.price,
+      confidence: quote.confidence,
+      publishTime: quote.publishTime,
       priceFeedId: quote.priceFeedId,
       changeSinceLastQuote,
     };
@@ -243,6 +249,10 @@ export class StocknizedAgent {
   }
 
   async runStrategy(symbols: string[] = ["AAPL", "TSLA", "NVDA"]): Promise<number> {
+    if (!hasPythApiKey()) {
+      console.log("[Stock] PYTH_API_KEY missing - using deterministic paper quotes");
+    }
+
     let totalPnl = 0;
 
     for (const symbol of symbols) {
