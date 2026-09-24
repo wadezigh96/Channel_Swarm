@@ -1,18 +1,21 @@
 /**
- * StocknizedAgent — Specialized agent for tokenized equities on Solana
+ * StocknizedAgent — Specialized agent for tokenized equities on Solana.
  *
- * Targets the "Stocknized Agent on Clawpump" bounty.
- * Can launch stock-paired tokens via Meteora DBC style curves
- * and trade synthetic / tokenized stocks while funding Payment Channels.
+ * Market data is sourced from Pyth Hermes when feed IDs are configured.
+ * Trade execution remains explicitly paper/in-memory until a verified
+ * tokenized-equity venue and on-chain swap path are integrated.
  */
 
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair } from "@solana/web3.js";
+import { getPythQuote } from "../market/pyth-client.js";
 
 export interface StockQuote {
   symbol: string;
   price: number;
-  change24h: number;
-  volume: number;
+  confidence: number;
+  publishTime: number;
+  priceFeedId: string;
+  changeSinceLastQuote?: number;
 }
 
 export interface TradeResult {
@@ -21,12 +24,14 @@ export interface TradeResult {
   amount: number;
   price: number;
   txSignature?: string;
+  execution: "paper";
 }
 
 export class StocknizedAgent {
   private connection: Connection;
   private wallet: Keypair;
-  private portfolio = new Map<string, number>(); // symbol → units
+  private portfolio = new Map<string, number>();
+  private lastPrices = new Map<string, number>();
 
   constructor(connection: Connection, wallet: Keypair) {
     this.connection = connection;
@@ -34,31 +39,35 @@ export class StocknizedAgent {
   }
 
   /**
-   * Fetch a mock / real quote for a tokenized stock.
-   * In production this would hit a price feed or Clawpump/Meteora oracle.
+   * Fetch live Pyth market data.
+   * No synthetic price, volume, or 24h change is generated.
    */
   async getQuote(symbol: string): Promise<StockQuote> {
-    // Simulated realistic quote
-    const base: Record<string, number> = {
-      AAPL: 228.5,
-      TSLA: 248.2,
-      NVDA: 132.4,
-      MSFT: 425.1,
-    };
-    const price = base[symbol] ?? 100 + Math.random() * 50;
+    const quote = await getPythQuote(symbol);
+    const previous = this.lastPrices.get(quote.symbol);
+    const changeSinceLastQuote =
+      previous && previous > 0 ? ((quote.price - previous) / previous) * 100 : undefined;
+
+    this.lastPrices.set(quote.symbol, quote.price);
+
     return {
-      symbol,
-      price: Number(price.toFixed(2)),
-      change24h: Number(((Math.random() - 0.45) * 4).toFixed(2)),
-      volume: Math.floor(Math.random() * 5_000_000),
+      ...quote,
+      changeSinceLastQuote,
     };
   }
 
   /**
-   * Execute a paper / real trade of a tokenized stock.
-   * Real implementation would use Meteora DBC or Clawpump liquidity pools.
+   * Paper execution only.
+   *
+   * This deliberately does not manufacture a Solana transaction signature.
+   * A real implementation must be wired to a verified tokenized-equity
+   * venue / SPL asset and return the actual confirmed transaction signature.
    */
   async trade(symbol: string, side: "buy" | "sell", amountUsd: number): Promise<TradeResult> {
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      throw new Error("amountUsd must be greater than zero");
+    }
+
     const quote = await this.getQuote(symbol);
     const units = amountUsd / quote.price;
 
@@ -70,36 +79,50 @@ export class StocknizedAgent {
       this.portfolio.set(symbol, held - units);
     }
 
-    console.log(`[Stock] ${side.toUpperCase()} ${units.toFixed(4)} ${symbol} @ $${quote.price} ($${amountUsd})`);
+    console.log(
+      `[Stock][PAPER] ${side.toUpperCase()} ${units.toFixed(6)} ${symbol} @ $${quote.price.toFixed(4)} ($${amountUsd.toFixed(2)})`
+    );
 
     return {
       symbol,
       side,
       amount: units,
       price: quote.price,
-      // txSignature would be real in production
+      execution: "paper",
     };
   }
 
   /**
-   * Simple strategy: buy the dip on tokenized stocks and use profits to fund channels.
+   * Simple live-data strategy.
+   *
+   * The first observation only establishes a baseline. Subsequent cycles
+   * can react to observed price movement; no fake 24h change is generated.
    */
   async runStrategy(symbols: string[] = ["AAPL", "TSLA", "NVDA"]): Promise<number> {
     let totalPnl = 0;
+
     for (const symbol of symbols) {
       const quote = await this.getQuote(symbol);
-      if (quote.change24h < -1.5) {
-        // Buy the dip
+
+      if (quote.changeSinceLastQuote === undefined) {
+        console.log(`[Stock] ${symbol}: baseline established @ $${quote.price.toFixed(4)}`);
+        continue;
+      }
+
+      if (quote.changeSinceLastQuote < -1.5) {
         await this.trade(symbol, "buy", 2.5);
         totalPnl -= 2.5;
-      } else if (quote.change24h > 2.0 && (this.portfolio.get(symbol) ?? 0) > 0) {
-        // Take profit
+      } else if (
+        quote.changeSinceLastQuote > 2.0 &&
+        (this.portfolio.get(symbol) ?? 0) > 0
+      ) {
         const held = this.portfolio.get(symbol)!;
         const value = held * quote.price;
         await this.trade(symbol, "sell", value);
         totalPnl += value;
       }
     }
+
     console.log(`[Stock] Strategy cycle PnL estimate: $${totalPnl.toFixed(2)}`);
     return totalPnl;
   }
