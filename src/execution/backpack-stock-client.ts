@@ -31,6 +31,30 @@ export interface BackpackStockTicker {
   quoteVolume: string;
 }
 
+export interface BackpackRfq {
+  rfqId: string;
+  clientId?: number;
+  symbol: string;
+  side: "Bid" | "Ask";
+  price?: string;
+  quantity?: string;
+  quoteQuantity?: string;
+  status?: string;
+  executionMode?: "AwaitAccept" | "Immediate";
+  expiryTime?: number;
+  executedQuantity?: string;
+  executedQuoteQuantity?: string;
+}
+
+export interface BackpackRfqQuote {
+  rfqId: string;
+  quoteId: string;
+  clientId?: number;
+  bidPrice?: string;
+  askPrice?: string;
+  status?: string;
+}
+
 export interface BackpackOrderResult {
   orderId: string;
   clientId?: number;
@@ -64,13 +88,17 @@ function signingKeypair(): nacl.SignKeyPair {
   return nacl.sign.keyPair.fromSeed(bytes);
 }
 
-async function signedRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function signedRequest<T>(
+  instruction: string,
+  path: string,
+  body: Record<string, unknown>
+): Promise<T> {
   const apiKey = process.env.BACKPACK_API_KEY;
   if (!apiKey) throw new Error("BACKPACK_API_KEY is not configured");
 
   const timestamp = Date.now();
   const payload =
-    `instruction=orderExecute&${sortedQuery(body)}&timestamp=${timestamp}&window=${WINDOW}`;
+    `instruction=${instruction}&${sortedQuery(body)}&timestamp=${timestamp}&window=${WINDOW}`;
 
   const signature = nacl.sign.detached(
     Buffer.from(payload, "utf8"),
@@ -131,8 +159,7 @@ export class BackpackStockClient {
       throw new Error(`Backpack securities ${response.status}: ${await response.text()}`);
     }
 
-    const securities = (await response.json()) as BackpackStockSecurity[];
-    return securities;
+    return (await response.json()) as BackpackStockSecurity[];
   }
 
   async getStockMarket(symbol: string): Promise<BackpackStockMarket | undefined> {
@@ -174,6 +201,110 @@ export class BackpackStockClient {
     return (await response.json()) as BackpackStockTicker;
   }
 
+  private assertRisk(notionalUsdc: number): void {
+    if (!Number.isFinite(notionalUsdc) || notionalUsdc <= 0) {
+      throw new Error("notionalUsdc must be greater than zero");
+    }
+
+    const maxUsdc = Number(process.env.BACKPACK_MAX_ORDER_USDC ?? "5");
+    if (notionalUsdc > maxUsdc) {
+      throw new Error(`Order exceeds configured BACKPACK_MAX_ORDER_USDC=${maxUsdc}`);
+    }
+  }
+
+  /**
+   * Submit a stock RFQ without accepting a quote.
+   * This is intentionally separate from execution so a demo can prove
+   * the real RFQ path without automatically filling a trade.
+   */
+  async submitStockRfq(
+    symbol: string,
+    side: "Bid" | "Ask",
+    quantity: number
+  ): Promise<BackpackRfq> {
+    if (process.env.BACKPACK_LIVE_TRADING !== "true") {
+      throw new Error("Live Backpack RFQ is disabled; set BACKPACK_LIVE_TRADING=true explicitly");
+    }
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new Error("quantity must be greater than zero");
+    }
+
+    const rfqSymbol = symbol.endsWith("_RFQ") ? symbol : `${symbol}_RFQ`;
+    const baseSecurity = rfqSymbol.split("_USDC_RFQ")[0];
+
+    const securities = await this.listSecurities();
+    const security = securities.find(
+      (item) => item.asset === baseSecurity || item.asset === baseSecurity.split(".")[0]
+    );
+
+    if (!security) {
+      throw new Error(`No verified Backpack security for RFQ symbol: ${rfqSymbol}`);
+    }
+
+    const body = {
+      clientId: Math.floor(Math.random() * 0x7fffffff),
+      quantity: quantity.toFixed(8),
+      symbol: rfqSymbol,
+      side,
+      executionMode: "AwaitAccept",
+      autoBorrow: false,
+      autoBorrowRepay: false,
+      autoLend: false,
+      autoLendRedeem: false,
+    };
+
+    return signedRequest<BackpackRfq>("rfqSubmit", "/api/v1/rfq", body);
+  }
+
+  /**
+   * Read the account's open RFQs. Requires API credentials.
+   */
+  async listOpenRfqs(symbol?: string): Promise<Array<{ rfq: BackpackRfq; quotes: BackpackRfqQuote[] }>> {
+    const params: Record<string, unknown> = {};
+    if (symbol) params.symbol = symbol;
+
+    const query = sortedQuery(params);
+    const path = query ? `/api/v1/rfqs?${query}` : "/api/v1/rfqs";
+
+    const apiKey = process.env.BACKPACK_API_KEY;
+    if (!apiKey) throw new Error("BACKPACK_API_KEY is not configured");
+
+    const timestamp = Date.now();
+    const payload = `instruction=rfqQuery&${query ? query + "&" : ""}timestamp=${timestamp}&window=${WINDOW}`;
+    const signature = nacl.sign.detached(
+      Buffer.from(payload, "utf8"),
+      signingKeypair().secretKey
+    );
+
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: {
+        "X-API-KEY": apiKey,
+        "X-SIGNATURE": Buffer.from(signature).toString("base64"),
+        "X-TIMESTAMP": String(timestamp),
+        "X-WINDOW": String(WINDOW),
+      },
+    });
+
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Backpack RFQs ${response.status}: ${text}`);
+
+    return JSON.parse(text) as Array<{ rfq: BackpackRfq; quotes: BackpackRfqQuote[] }>;
+  }
+
+  async acceptStockQuote(rfqId: string, quoteId: string): Promise<BackpackRfq> {
+    if (process.env.BACKPACK_LIVE_TRADING !== "true") {
+      throw new Error("Live Backpack quote acceptance is disabled");
+    }
+
+    if (!rfqId || !quoteId) throw new Error("rfqId and quoteId are required");
+
+    return signedRequest<BackpackRfq>("quoteAccept", "/api/v1/rfq/accept", {
+      rfqId,
+      quoteId,
+    });
+  }
+
   async marketOrder(
     symbol: string,
     side: "Bid" | "Ask",
@@ -184,33 +315,18 @@ export class BackpackStockClient {
       throw new Error("Live Backpack trading is disabled; set BACKPACK_LIVE_TRADING=true explicitly");
     }
 
-    const maxUsdc = Number(process.env.BACKPACK_MAX_ORDER_USDC ?? "5");
-    if (
-      !Number.isFinite(quantity) ||
-      quantity <= 0 ||
-      !Number.isFinite(notionalUsdc) ||
-      notionalUsdc <= 0 ||
-      notionalUsdc > maxUsdc
-    ) {
-      throw new Error(`Order exceeds configured BACKPACK_MAX_ORDER_USDC=${maxUsdc}`);
-    }
+    this.assertRisk(notionalUsdc);
 
     const verification = await this.verifyStockMarket(symbol);
     if (!verification.verified) {
       throw new Error(`Not a verified Backpack STOCK market: ${symbol}`);
     }
 
-    if (
-      verification.market.minQuantity &&
-      quantity < Number(verification.market.minQuantity)
-    ) {
+    if (verification.market.minQuantity && quantity < Number(verification.market.minQuantity)) {
       throw new Error(`Quantity below market minimum: ${verification.market.minQuantity}`);
     }
 
-    if (
-      verification.market.maxQuantity &&
-      quantity > Number(verification.market.maxQuantity)
-    ) {
+    if (verification.market.maxQuantity && quantity > Number(verification.market.maxQuantity)) {
       throw new Error(`Quantity above market maximum: ${verification.market.maxQuantity}`);
     }
 
@@ -228,6 +344,6 @@ export class BackpackStockClient {
       selfTradePrevention: "RejectTaker",
     };
 
-    return signedRequest<BackpackOrderResult>("/api/v1/order", body);
+    return signedRequest<BackpackOrderResult>("orderExecute", "/api/v1/order", body);
   }
 }
