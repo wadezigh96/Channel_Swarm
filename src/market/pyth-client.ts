@@ -1,46 +1,127 @@
-import { HermesClient } from "@pythnetwork/hermes-client";
-
 export interface PythQuote {
   symbol: string;
   price: number;
   confidence: number;
   publishTime: number;
-  priceFeedId: string;
+  feedUpdateTimestamp: number;
+  priceFeedId: number;
+  marketSession?: string;
 }
 
-const HERMES_URL = process.env.PYTH_HERMES_URL ?? "https://pyth.dourolabs.app/hermes";
+const PYTH_PRO_URL =
+  process.env.PYTH_PRO_URL ?? "https://pyth-lazer.dourolabs.app";
 
-const FEEDS: Record<string, string> = {
-  AAPL: process.env.PYTH_AAPL_FEED_ID ?? "",
-  MSFT: process.env.PYTH_MSFT_FEED_ID ?? "",
-  NVDA: process.env.PYTH_NVDA_FEED_ID ?? "",
-  TSLA: process.env.PYTH_TSLA_FEED_ID ?? "",
+const FEEDS: Record<string, number> = {
+  AAPL: 3191,
+  MSFT: 3196,
+  NVDA: 3188,
+  TSLA: 3185,
+  SPCX: 3316,
 };
 
-function client(): HermesClient {
-  return new HermesClient(HERMES_URL, {
-    accessToken: process.env.PYTH_API_KEY,
-  });
+function configuredFeeds(): Record<string, number> {
+  const configured: Record<string, number> = { ...FEEDS };
+
+  for (const symbol of Object.keys(FEEDS)) {
+    const envKey = `PYTH_${symbol}_FEED_ID`;
+    const value = process.env[envKey];
+    if (value !== undefined && value !== "") {
+      const id = Number(value);
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new Error(`invalid_pyth_feed_id:${symbol}`);
+      }
+      configured[symbol] = id;
+    }
+  }
+
+  return configured;
+}
+
+function apiKey(): string {
+  const key = process.env.PYTH_API_KEY;
+  if (!key) throw new Error("missing_pyth_api_key");
+  return key;
+}
+
+interface PythProFeed {
+  priceFeedId: number;
+  price?: string | number;
+  confidence?: string | number;
+  exponent: number;
+  feedUpdateTimestamp: number | string;
+  marketSession?: string;
+}
+
+interface PythProResponse {
+  parsed?: {
+    timestampUs?: number | string;
+    priceFeeds?: PythProFeed[];
+  };
 }
 
 export async function getPythQuote(symbol: string): Promise<PythQuote> {
   const normalized = symbol.toUpperCase();
-  const priceFeedId = FEEDS[normalized];
-  if (!priceFeedId) throw new Error(`missing_pyth_feed_id:${normalized}`);
+  const priceFeedId = configuredFeeds()[normalized];
 
-  const response = await client().getLatestPriceUpdates([priceFeedId]);
-  const feed = response.parsed?.[0];
-  if (!feed?.price) throw new Error(`pyth_price_unavailable:${normalized}`);
+  if (!priceFeedId) {
+    throw new Error(`missing_pyth_feed_id:${normalized}`);
+  }
 
-  const price = Number(feed.price.price) * 10 ** Number(feed.price.expo);
-  const confidence = Number(feed.price.conf) * 10 ** Number(feed.price.expo);
-  const publishTime = Number(feed.price.publish_time);
+  const response = await fetch(`${PYTH_PRO_URL}/v1/latest_price`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      priceFeedIds: [priceFeedId],
+      properties: [
+        "price",
+        "confidence",
+        "feedUpdateTimestamp",
+        "marketSession",
+      ],
+      formats: [],
+      channel: process.env.PYTH_PRO_CHANNEL ?? "fixed_rate@200ms",
+    }),
+  });
 
-  if (!Number.isFinite(price) || price <= 0) throw new Error(`invalid_pyth_price:${normalized}`);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`pyth_pro_http_${response.status}:${body.slice(0, 300)}`);
+  }
 
-  return { symbol: normalized, price, confidence, publishTime, priceFeedId };
+  const payload = (await response.json()) as PythProResponse;
+  const feed = payload.parsed?.priceFeeds?.[0];
+
+  if (!feed || feed.price === undefined) {
+    throw new Error(`pyth_price_unavailable:${normalized}`);
+  }
+
+  const price = Number(feed.price) * 10 ** Number(feed.exponent);
+  const confidence = Number(feed.confidence ?? 0) * 10 ** Number(feed.exponent);
+  const feedUpdateTimestamp = Number(feed.feedUpdateTimestamp);
+  const publishTime = Math.floor(feedUpdateTimestamp / 1_000_000);
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`invalid_pyth_price:${normalized}`);
+  }
+
+  if (!Number.isFinite(feedUpdateTimestamp) || feedUpdateTimestamp <= 0) {
+    throw new Error(`invalid_pyth_timestamp:${normalized}`);
+  }
+
+  return {
+    symbol: normalized,
+    price,
+    confidence,
+    publishTime,
+    feedUpdateTimestamp,
+    priceFeedId,
+    marketSession: feed.marketSession,
+  };
 }
 
 export function configuredPythSymbols(): string[] {
-  return Object.entries(FEEDS).filter(([, id]) => Boolean(id)).map(([symbol]) => symbol);
+  return Object.keys(configuredFeeds());
 }
