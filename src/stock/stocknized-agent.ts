@@ -2,12 +2,13 @@
  * StocknizedAgent — Specialized agent for tokenized equities on Solana.
  *
  * Market data is sourced from Pyth Hermes when feed IDs are configured.
- * Trade execution remains explicitly paper/in-memory until a verified
- * tokenized-equity venue and on-chain swap path are integrated.
+ * Execution can use a verified Backpack STOCK market when explicitly enabled;
+ * otherwise the strategy remains paper-only.
  */
 
 import { Connection, Keypair } from "@solana/web3.js";
 import { getPythQuote } from "../market/pyth-client.js";
+import { BackpackStockClient } from "../execution/backpack-stock-client.js";
 
 export interface StockQuote {
   symbol: string;
@@ -23,8 +24,9 @@ export interface TradeResult {
   side: "buy" | "sell";
   amount: number;
   price: number;
+  orderId?: string;
   txSignature?: string;
-  execution: "paper";
+  execution: "paper" | "backpack";
 }
 
 export class StocknizedAgent {
@@ -32,16 +34,13 @@ export class StocknizedAgent {
   private wallet: Keypair;
   private portfolio = new Map<string, number>();
   private lastPrices = new Map<string, number>();
+  private backpack = new BackpackStockClient();
 
   constructor(connection: Connection, wallet: Keypair) {
     this.connection = connection;
     this.wallet = wallet;
   }
 
-  /**
-   * Fetch live Pyth market data.
-   * No synthetic price, volume, or 24h change is generated.
-   */
   async getQuote(symbol: string): Promise<StockQuote> {
     const quote = await getPythQuote(symbol);
     const previous = this.lastPrices.get(quote.symbol);
@@ -57,11 +56,8 @@ export class StocknizedAgent {
   }
 
   /**
-   * Paper execution only.
-   *
-   * This deliberately does not manufacture a Solana transaction signature.
-   * A real implementation must be wired to a verified tokenized-equity
-   * venue / SPL asset and return the actual confirmed transaction signature.
+   * Execute through Backpack only when explicitly enabled.
+   * The adapter verifies that the target market is marked rwaMarketType=STOCK.
    */
   async trade(symbol: string, side: "buy" | "sell", amountUsd: number): Promise<TradeResult> {
     if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
@@ -70,6 +66,29 @@ export class StocknizedAgent {
 
     const quote = await this.getQuote(symbol);
     const units = amountUsd / quote.price;
+    const live = process.env.BACKPACK_LIVE_TRADING === "true";
+
+    if (live) {
+      const result = await this.backpack.marketOrder(
+        symbol,
+        side === "buy" ? "Bid" : "Ask",
+        units,
+        amountUsd
+      );
+
+      console.log(
+        `[Stock][BACKPACK] ${side.toUpperCase()} ${units.toFixed(6)} ${symbol} @ $${quote.price.toFixed(4)} order=${result.orderId}`
+      );
+
+      return {
+        symbol,
+        side,
+        amount: Number(result.executedQuantity ?? units),
+        price: quote.price,
+        orderId: result.orderId,
+        execution: "backpack",
+      };
+    }
 
     if (side === "buy") {
       this.portfolio.set(symbol, (this.portfolio.get(symbol) ?? 0) + units);
@@ -92,12 +111,6 @@ export class StocknizedAgent {
     };
   }
 
-  /**
-   * Simple live-data strategy.
-   *
-   * The first observation only establishes a baseline. Subsequent cycles
-   * can react to observed price movement; no fake 24h change is generated.
-   */
   async runStrategy(symbols: string[] = ["AAPL", "TSLA", "NVDA"]): Promise<number> {
     let totalPnl = 0;
 
