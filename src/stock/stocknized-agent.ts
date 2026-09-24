@@ -60,6 +60,7 @@ export class StocknizedAgent {
 
     return {
       ...quote,
+      priceFeedId: String(quote.priceFeedId),
       changeSinceLastQuote,
     };
   }
