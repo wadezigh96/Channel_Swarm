@@ -118,9 +118,7 @@ async function signedRequest<T>(
   });
 
   const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`Backpack API ${response.status}: ${text}`);
-  }
+  if (!response.ok) throw new Error(`Backpack API ${response.status}: ${text}`);
 
   return JSON.parse(text) as T;
 }
@@ -136,7 +134,6 @@ async function signedGet<T>(
   const query = sortedQuery(params);
   const timestamp = Date.now();
   const payload = `instruction=${instruction}&${query ? query + "&" : ""}timestamp=${timestamp}&window=${WINDOW}`;
-
   const signature = nacl.sign.detached(
     Buffer.from(payload, "utf8"),
     signingKeypair().secretKey
@@ -165,9 +162,7 @@ async function signedGet<T>(
 export class BackpackStockClient {
   async listStockMarkets(): Promise<BackpackStockMarket[]> {
     const response = await fetch(`${BASE_URL}/api/v1/markets`);
-    if (!response.ok) {
-      throw new Error(`Backpack markets ${response.status}: ${await response.text()}`);
-    }
+    if (!response.ok) throw new Error(`Backpack markets ${response.status}: ${await response.text()}`);
 
     const markets = (await response.json()) as Array<Record<string, unknown>>;
 
@@ -192,15 +187,33 @@ export class BackpackStockClient {
 
   async listSecurities(): Promise<BackpackStockSecurity[]> {
     const response = await fetch(`${BASE_URL}/api/v1/securities`);
-    if (!response.ok) {
-      throw new Error(`Backpack securities ${response.status}: ${await response.text()}`);
-    }
-
+    if (!response.ok) throw new Error(`Backpack securities ${response.status}: ${await response.text()}`);
     return (await response.json()) as BackpackStockSecurity[];
   }
 
   async getStockMarket(symbol: string): Promise<BackpackStockMarket | undefined> {
     return (await this.listStockMarkets()).find((market) => market.symbol === symbol);
+  }
+
+  async resolveStockSecurity(symbol: string): Promise<BackpackStockSecurity> {
+    const normalized = symbol.toUpperCase().replace(/_USDC_RFQ$/, "").replace(/_RFQ$/, "");
+    const securities = await this.listSecurities();
+
+    const security = securities.find(
+      (item) =>
+        item.asset.toUpperCase() === normalized ||
+        item.asset.toUpperCase().split(".")[0] === normalized
+    );
+
+    if (!security) throw new Error(`No Backpack security found for ${symbol}`);
+    return security;
+  }
+
+  async resolveRfqSymbol(symbol: string): Promise<string> {
+    if (symbol.toUpperCase().endsWith("_USDC_RFQ")) return symbol;
+
+    const security = await this.resolveStockSecurity(symbol);
+    return `${security.asset}_USDC_RFQ`;
   }
 
   async verifyStockMarket(symbol: string): Promise<{
@@ -211,11 +224,7 @@ export class BackpackStockClient {
     const market = await this.getStockMarket(symbol);
     if (!market) throw new Error(`No Backpack spot STOCK market found for ${symbol}`);
 
-    const securities = await this.listSecurities();
-    const base = market.baseSymbol?.split(".")[0] ?? market.baseSymbol ?? symbol.split("_")[0];
-    const security = securities.find(
-      (item) => item.asset === base || item.asset === market.baseSymbol
-    );
+    const security = await this.resolveStockSecurity(market.baseSymbol ?? symbol);
 
     return {
       market,
@@ -231,17 +240,12 @@ export class BackpackStockClient {
     if (external) url.searchParams.set("source", "External");
 
     const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Backpack ticker ${response.status}: ${await response.text()}`);
-    }
-
+    if (!response.ok) throw new Error(`Backpack ticker ${response.status}: ${await response.text()}`);
     return (await response.json()) as BackpackStockTicker;
   }
 
   private assertRisk(notionalUsdc: number): void {
-    if (!Number.isFinite(notionalUsdc) || notionalUsdc <= 0) {
-      throw new Error("notionalUsdc must be greater than zero");
-    }
+    if (!Number.isFinite(notionalUsdc) || notionalUsdc <= 0) throw new Error("notionalUsdc must be greater than zero");
 
     const maxUsdc = Number(process.env.BACKPACK_MAX_ORDER_USDC ?? "5");
     if (notionalUsdc > maxUsdc) {
@@ -249,24 +253,14 @@ export class BackpackStockClient {
     }
   }
 
-  private assertQuantity(
-    security: BackpackStockSecurity | undefined,
-    quantity: number
-  ): void {
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      throw new Error("quantity must be greater than zero");
-    }
+  private assertQuantity(security: BackpackStockSecurity, quantity: number): void {
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("quantity must be greater than zero");
 
-    const session = security?.sessions?.[0];
+    const session = security.sessions?.[0];
     if (!session) return;
 
-    if (quantity < Number(session.minQuantity)) {
-      throw new Error(`Quantity below security minimum: ${session.minQuantity}`);
-    }
-
-    if (quantity > Number(session.maxQuantity)) {
-      throw new Error(`Quantity above security maximum: ${session.maxQuantity}`);
-    }
+    if (quantity < Number(session.minQuantity)) throw new Error(`Quantity below security minimum: ${session.minQuantity}`);
+    if (quantity > Number(session.maxQuantity)) throw new Error(`Quantity above security maximum: ${session.maxQuantity}`);
   }
 
   async submitStockRfq(
@@ -279,25 +273,14 @@ export class BackpackStockClient {
       throw new Error("Live Backpack RFQ is disabled; set BACKPACK_LIVE_TRADING=true explicitly");
     }
 
-    const rfqSymbol = symbol.endsWith("_RFQ") ? symbol : `${symbol}_RFQ`;
-    const securityAsset = rfqSymbol.replace(/_USDC_RFQ$/, "");
-
-    const securities = await this.listSecurities();
-    const security = securities.find(
-      (item) => item.asset === securityAsset || item.asset === securityAsset.split(".")[0]
-    );
-
-    if (!security) {
-      throw new Error(`No verified Backpack security for RFQ symbol: ${rfqSymbol}`);
-    }
-
+    const security = await this.resolveStockSecurity(symbol);
     this.assertQuantity(security, quantity);
     if (notionalUsdc !== undefined) this.assertRisk(notionalUsdc);
 
     const body = {
       clientId: Math.floor(Math.random() * 0x7fffffff),
       quantity: quantity.toFixed(8),
-      symbol: rfqSymbol,
+      symbol: `${security.asset}_USDC_RFQ`,
       side,
       executionMode: "AwaitAccept",
       autoBorrow: false,
@@ -322,17 +305,37 @@ export class BackpackStockClient {
       throw new Error("Live Backpack quote acceptance is disabled");
     }
 
-    if (!rfqId || !quoteId) throw new Error("rfqId and quoteId are required");
-
     const open = await this.listOpenRfqs();
     const current = open.find((entry) => entry.rfq.rfqId === rfqId);
     if (!current) throw new Error(`RFQ not open: ${rfqId}`);
 
-    const quote = current.quotes.find((item) => item.quoteId === quoteId);
-    if (!quote) throw new Error(`Quote does not belong to RFQ: ${quoteId}`);
+    const activeQuotes = current.quotes.filter(
+      (quote) => !quote.status || ["New", "Active"].includes(quote.status)
+    );
+    const requested = activeQuotes.find((quote) => quote.quoteId === quoteId);
+    if (!requested) throw new Error(`Quote is not active or does not belong to RFQ: ${quoteId}`);
 
-    if (quote.status && !["New", "Active"].includes(quote.status)) {
-      throw new Error(`Quote is not active: ${quote.status}`);
+    const side = current.rfq.side;
+    const priceOf = (quote: BackpackRfqQuote): number | undefined => {
+      const value = side === "Bid" ? quote.askPrice : quote.bidPrice;
+      const parsed = value === undefined ? undefined : Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    const priced = activeQuotes
+      .map((quote) => ({ quote, price: priceOf(quote) }))
+      .filter((entry): entry is { quote: BackpackRfqQuote; price: number } => entry.price !== undefined);
+
+    if (priced.length > 0) {
+      const best = priced.reduce((currentBest, entry) =>
+        side === "Bid"
+          ? entry.price < currentBest.price ? entry : currentBest
+          : entry.price > currentBest.price ? entry : currentBest
+      );
+
+      if (best.quote.quoteId !== quoteId) {
+        throw new Error(`Quote is not current best quote; best=${best.quote.quoteId}`);
+      }
     }
 
     return signedRequest<BackpackRfq>("quoteAccept", "/api/v1/rfq/accept", {
@@ -354,9 +357,7 @@ export class BackpackStockClient {
     this.assertRisk(notionalUsdc);
 
     const verification = await this.verifyStockMarket(symbol);
-    if (!verification.verified) {
-      throw new Error(`Not a verified Backpack STOCK market: ${symbol}`);
-    }
+    if (!verification.verified) throw new Error(`Not a verified Backpack STOCK market: ${symbol}`);
 
     if (verification.market.minQuantity && quantity < Number(verification.market.minQuantity)) {
       throw new Error(`Quantity below market minimum: ${verification.market.minQuantity}`);
