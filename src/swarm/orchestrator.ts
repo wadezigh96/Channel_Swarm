@@ -5,6 +5,7 @@
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { ChannelManager } from "../payments/channel-manager.js";
 import { StocknizedAgent } from "../stock/stocknized-agent.js";
+import { ReputationRegistry } from "../reputation/reputation.js";
 
 export interface AgentIdentity {
   name: string;
@@ -21,10 +22,16 @@ export class SwarmOrchestrator {
   private usdcMint: PublicKey;
   private onchain: boolean;
 
+  private reputation = new ReputationRegistry();
+
   constructor(connection: Connection, usdcMint: PublicKey, onchain = false) {
     this.connection = connection;
     this.usdcMint = usdcMint;
     this.onchain = onchain;
+  }
+
+  getReputation(): ReputationRegistry {
+    return this.reputation;
   }
 
   addAgent(name: string, role: AgentIdentity["role"], keypair?: Keypair) {
@@ -36,6 +43,7 @@ export class SwarmOrchestrator {
       reputation: 1.0,
     };
     this.agents.push(agent);
+    this.reputation.register(name);
 
     const cm = new ChannelManager({
       connection: this.connection,
@@ -62,6 +70,12 @@ export class SwarmOrchestrator {
     const dataAgent = this.agents.find((a) => a.role === "data") ?? this.agents[1];
     const cmAlpha = this.channelManagers.get(alpha.name)!;
 
+    if (!this.reputation.canOpenChannel(dataAgent.name, 0.5)) {
+      throw new Error(
+        `Reputation too low to open channel with ${dataAgent.name} (min 0.5)`,
+      );
+    }
+
     const channelId = await cmAlpha.openChannel({
       counterparty: dataAgent.keypair.publicKey,
       ceilingUsdc: 5.0,
@@ -79,11 +93,13 @@ export class SwarmOrchestrator {
 
     const { claimed, refunded, signature } = await cmAlpha.settle(channelId);
 
-    dataAgent.reputation += 0.05;
-    alpha.reputation += 0.02;
+    const dataScore = this.reputation.recordSuccess(dataAgent.name, claimed);
+    const alphaScore = this.reputation.recordSuccess(alpha.name, claimed * 0.4);
+    dataAgent.reputation = dataScore;
+    alpha.reputation = alphaScore;
 
     console.log(
-      `[Reputation] ${dataAgent.name}: ${dataAgent.reputation.toFixed(2)} | ${alpha.name}: ${alpha.reputation.toFixed(2)}`
+      `[Reputation] ${dataAgent.name}: ${dataScore.toFixed(2)} | ${alpha.name}: ${alphaScore.toFixed(2)}`
     );
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
     if (signature) console.log(`[Swarm] Settle signature: ${signature}`);
@@ -96,7 +112,7 @@ export class SwarmOrchestrator {
       name: a.name,
       role: a.role,
       pubkey: a.keypair.publicKey.toBase58(),
-      reputation: a.reputation,
+      reputation: this.reputation.get(a.name)?.score ?? a.reputation,
     }));
   }
 }

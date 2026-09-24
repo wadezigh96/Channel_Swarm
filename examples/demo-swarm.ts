@@ -7,7 +7,6 @@
 
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SwarmOrchestrator } from "../src/swarm/orchestrator.js";
-import { ReputationRegistry } from "../src/reputation/reputation.js";
 import { loadPayerFromEnv, isOnchainMode } from "../src/wallet.js";
 import * as dotenv from "dotenv";
 
@@ -34,7 +33,7 @@ async function main() {
   );
 
   const swarm = new SwarmOrchestrator(connection, usdcMint, onchain);
-  const reputation = new ReputationRegistry();
+  const reputation = swarm.getReputation();
 
   const fundedPayer = loadPayerFromEnv();
   const alpha = swarm.addAgent("Alpha", "general", fundedPayer ?? undefined);
@@ -48,16 +47,12 @@ async function main() {
     console.warn("[Warn] Channel open will fall back to simulation unless that key is funded.");
   }
 
-  reputation.register(alpha.name);
-  reputation.register(data.name);
-  reputation.register(stock.name);
-
   console.log("\n--- Agents online ---");
   console.table(
     swarm.listAgents().map((a) => ({
       name: a.name,
       role: a.role,
-      reputation: reputation.get(a.name)?.score.toFixed(2),
+      reputation: a.reputation.toFixed(2),
       pubkey: a.pubkey.slice(0, 8) + "...",
     }))
   );
@@ -70,9 +65,6 @@ async function main() {
   console.log("\n--- Running demo cycle ---");
   const result = await swarm.runDemoCycle();
 
-  reputation.recordSuccess(data.name, result.claimed);
-  reputation.recordSuccess(alpha.name, result.claimed * 0.4);
-
   console.log("\n--- Final Reputation Leaderboard ---");
   console.table(
     reputation.list().map((r) => ({
@@ -83,7 +75,7 @@ async function main() {
     }))
   );
 
-  console.log("\n═".repeat(55));
+  console.log("\n" + "═".repeat(55));
   console.log("  Demo complete.");
   console.log("  Dashboard: https://wadezigh96.github.io/Swarm_Agent/index.html");
   if (!onchain) {

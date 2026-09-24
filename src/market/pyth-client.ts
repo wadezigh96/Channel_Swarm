@@ -19,6 +19,15 @@ const FEEDS: Record<string, number> = {
   SPCX: 3316,
 };
 
+/** Deterministic paper bases when PYTH_API_KEY is missing (demo / sim). */
+const PAPER_BASE: Record<string, number> = {
+  AAPL: 190.0,
+  MSFT: 420.0,
+  NVDA: 120.0,
+  TSLA: 250.0,
+  SPCX: 100.0,
+};
+
 function configuredFeeds(): Record<string, number> {
   const configured: Record<string, number> = { ...FEEDS };
 
@@ -35,6 +44,37 @@ function configuredFeeds(): Record<string, number> {
   }
 
   return configured;
+}
+
+export function hasPythApiKey(): boolean {
+  return Boolean(process.env.PYTH_API_KEY?.trim());
+}
+
+/**
+ * Deterministic paper quote for simulation when no Pyth API key is configured.
+ * Slight minute-level wobble lets the strategy see non-zero change across cycles.
+ */
+export function getPaperQuote(symbol: string): PythQuote {
+  const normalized = symbol.toUpperCase();
+  const base = PAPER_BASE[normalized];
+  if (base === undefined) {
+    throw new Error(`missing_paper_feed:${normalized}`);
+  }
+
+  const tick = Math.floor(Date.now() / 60_000);
+  const wobble = 1 + ((tick + normalized.charCodeAt(0)) % 7) * 0.001 - 0.003;
+  const price = base * wobble;
+  const now = Date.now();
+
+  return {
+    symbol: normalized,
+    price,
+    confidence: price * 0.001,
+    publishTime: Math.floor(now / 1000),
+    feedUpdateTimestamp: now * 1000,
+    priceFeedId: configuredFeeds()[normalized] ?? 0,
+    marketSession: "paper",
+  };
 }
 
 function apiKey(): string {
@@ -60,6 +100,10 @@ interface PythProResponse {
 }
 
 export async function getPythQuote(symbol: string): Promise<PythQuote> {
+  if (!hasPythApiKey()) {
+    return getPaperQuote(symbol);
+  }
+
   const normalized = symbol.toUpperCase();
   const priceFeedId = configuredFeeds()[normalized];
 
