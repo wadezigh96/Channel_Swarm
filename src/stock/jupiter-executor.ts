@@ -22,6 +22,18 @@ function mintFor(symbol: string): string {
   return mint;
 }
 
+/** True when XSTOCK_<SYMBOL>_MINT is configured. */
+export function hasXStockMint(symbol: string): boolean {
+  const mint = STOCK_MINTS[symbol.toUpperCase()];
+  return Boolean(mint && mint.trim());
+}
+
+export function configuredXStockSymbols(): string[] {
+  return Object.entries(STOCK_MINTS)
+    .filter(([, mint]) => Boolean(mint && mint.trim()))
+    .map(([symbol]) => symbol);
+}
+
 function amountToBaseUnits(value: number, decimals: number): string {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error("trade amount must be greater than zero");
