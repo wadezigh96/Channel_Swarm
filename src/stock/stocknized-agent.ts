@@ -14,7 +14,7 @@ export interface StockQuote {
   price: number;
   confidence: number;
   publishTime: number;
-  priceFeedId: string;
+  priceFeedId: number;
   changeSinceLastQuote?: number;
 }
 
@@ -60,7 +60,7 @@ export class StocknizedAgent {
 
     return {
       ...quote,
-      priceFeedId: String(quote.priceFeedId),
+      priceFeedId: quote.priceFeedId,
       changeSinceLastQuote,
     };
   }
