@@ -3,18 +3,20 @@ import { BackpackStockClient } from "../src/execution/backpack-stock-client.js";
 const client = new BackpackStockClient();
 
 const markets = await client.listStockMarkets();
+const securities = await client.listSecurities();
+
+const securityByAsset = new Map(securities.map((security) => [security.asset, security]));
+
+const verified = markets.map((market) => ({
+  market,
+  security:
+    securityByAsset.get(market.baseSymbol ?? "") ??
+    securityByAsset.get(market.baseSymbol?.split(".")[0] ?? ""),
+}));
+
 console.log(JSON.stringify({
   stockMarketCount: markets.length,
-  stockMarkets: markets.slice(0, 25),
-}, null, 2));
-
-const securities = await client.listSecurities();
-const stockAssets = securities.filter((security) =>
-  /AAPL|MSFT|NVDA|TSLA/i.test(security.asset)
-);
-
-console.log(JSON.stringify({
-  matchingSecurities: stockAssets,
+  verifiedStockMarkets: verified.slice(0, 25),
 }, null, 2));
 
 for (const market of markets.slice(0, 10)) {
@@ -31,3 +33,8 @@ for (const market of markets.slice(0, 10)) {
     }, null, 2));
   }
 }
+
+console.log(JSON.stringify({
+  liveTradingEnabled: process.env.BACKPACK_LIVE_TRADING === "true",
+  note: "This example is read-only. It does not submit or accept RFQs.",
+}, null, 2));
