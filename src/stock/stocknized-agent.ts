@@ -144,29 +144,79 @@ export class StocknizedAgent {
     const live = process.env.BACKPACK_LIVE_TRADING === "true";
 
     if (live) {
-      const backpackSymbol = await this.resolveBackpackMarket(symbol);
-      if (!backpackSymbol) {
-        throw new Error(`No verified Backpack STOCK market for ${symbol}`);
-      }
-
-      const result = await this.backpack.marketOrder(
-        backpackSymbol,
+      const rfqSymbol = await this.backpack.resolveRfqSymbol(symbol);
+      const rfq = await this.backpack.submitStockRfq(
+        symbol,
         side === "buy" ? "Bid" : "Ask",
         units,
         amountUsd
       );
 
       console.log(
-        `[Stock][BACKPACK] ${side.toUpperCase()} ${units.toFixed(6)} ${backpackSymbol} @ $${quote.price.toFixed(4)} order=${result.orderId}`
+        `[Stock][RFQ] submitted ${side.toUpperCase()} ${units.toFixed(6)} ${rfqSymbol} rfq=${rfq.rfqId}`
+      );
+
+      if (process.env.BACKPACK_AUTO_ACCEPT_RFQ !== "true") {
+        return {
+          symbol,
+          side,
+          amount: units,
+          price: quote.price,
+          orderId: rfq.rfqId,
+          execution: "rfq",
+        };
+      }
+
+      const timeoutMs = Number(process.env.BACKPACK_RFQ_WAIT_MS ?? "10000");
+      const deadline = Date.now() + Math.max(1000, timeoutMs);
+      let bestQuote: { quoteId: string; price: number } | undefined;
+
+      while (Date.now() < deadline) {
+        const open = await this.backpack.listOpenRfqs(rfqSymbol);
+        const current = open.find((entry) => entry.rfq.rfqId === rfq.rfqId);
+
+        if (current) {
+          const active = current.quotes.filter(
+            (item) => !item.status || ["New", "Active"].includes(item.status)
+          );
+
+          const priced = active
+            .map((item) => {
+              const raw = side === "buy" ? item.askPrice : item.bidPrice;
+              return { quoteId: item.quoteId, price: raw === undefined ? NaN : Number(raw) };
+            })
+            .filter((item) => Number.isFinite(item.price));
+
+          if (priced.length > 0) {
+            bestQuote = priced.reduce((best, item) =>
+              side === "buy"
+                ? item.price < best.price ? item : best
+                : item.price > best.price ? item : best
+            );
+            break;
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      if (!bestQuote) {
+        throw new Error(`No active Backpack RFQ quote received for ${rfq.rfqId}`);
+      }
+
+      const accepted = await this.backpack.acceptStockQuote(rfq.rfqId, bestQuote.quoteId);
+
+      console.log(
+        `[Stock][RFQ] accepted ${bestQuote.quoteId} rfq=${rfq.rfqId} status=${accepted.status ?? "unknown"}`
       );
 
       return {
         symbol,
         side,
-        amount: Number(result.executedQuantity ?? units),
-        price: quote.price,
-        orderId: result.orderId,
-        execution: "backpack",
+        amount: Number(accepted.executedQuantity ?? units),
+        price: Number(accepted.price ?? bestQuote.price),
+        orderId: rfq.rfqId,
+        execution: "rfq",
       };
     }
 
