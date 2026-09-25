@@ -8,7 +8,7 @@
 
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://solana.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Swarm_Agent/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
 
 [**Live Dashboard**](https://swarm-agent-beta.vercel.app/) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
@@ -43,7 +43,7 @@ It combines:
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
-| **Dashboard** | Dark, agent-first GitHub Pages interface |
+| **Dashboard** | Dark, agent-first web dashboard |
 
 ---
 
@@ -166,7 +166,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 
 ```bash
 git clone https://github.com/wadezigh96/Channel_Swarm.git
-cd Swarm_Agent
+cd Channel_Swarm
 npm install
 
 npm test
@@ -187,7 +187,7 @@ Without a funded wallet, the demo safely remains in simulation mode.
 
 ## 🖥️ Dashboard
 
-The repository includes a dedicated GitHub Pages dashboard:
+The repository includes a dedicated web dashboard:
 
 **https://swarm-agent-beta.vercel.app/**
 
