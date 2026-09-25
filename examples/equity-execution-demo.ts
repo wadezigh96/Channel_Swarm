@@ -49,11 +49,6 @@ async function main() {
   );
 
   const agent = new StocknizedAgent(connection, wallet);
-  const proofCapableResult = (result: Awaited<ReturnType<StocknizedAgent["trade"]>>) =>
-    result as typeof result & { proof?: unknown };
-  const proofCapableAgent = agent as StocknizedAgent & {
-    getProofs?: () => unknown[];
-  };
 
   for (const symbol of symbols) {
     try {
@@ -67,7 +62,8 @@ async function main() {
         "buy",
         Math.min(1, Number(process.env.DEMO_TRADE_USDC ?? "1"))
       );
-      const trade = proofCapableResult(result);
+
+      const proof = "proof" in result ? result.proof : undefined;
 
       console.log(
         JSON.stringify(
@@ -80,7 +76,7 @@ async function main() {
             price: result.price,
             orderId: result.orderId,
             txSignature: result.txSignature,
-            proof: trade.proof,
+            proof,
           },
           null,
           2
@@ -102,12 +98,17 @@ async function main() {
     }
   }
 
+  const proofs =
+    "getProofs" in agent && typeof agent.getProofs === "function"
+      ? agent.getProofs()
+      : [];
+
   console.log(
     JSON.stringify(
       {
         type: "summary",
         portfolio: agent.getPortfolio(),
-        proofs: proofCapableAgent.getProofs?.() ?? [],
+        proofs,
         executionMode: mode,
       },
       null,
