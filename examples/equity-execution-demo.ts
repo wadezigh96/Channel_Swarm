@@ -49,8 +49,12 @@ async function main() {
   );
 
   const agent = new StocknizedAgent(connection, wallet);
+  const proofCapableResult = (result: Awaited<ReturnType<StocknizedAgent["trade"]>>) =>
+    result as typeof result & { proof?: unknown };
+  const proofCapableAgent = agent as StocknizedAgent & {
+    getProofs?: () => unknown[];
+  };
 
-  // Force at least one paper-visible cycle: seed last price then trade small
   for (const symbol of symbols) {
     try {
       const q1 = await agent.getQuote(symbol);
@@ -58,8 +62,13 @@ async function main() {
         JSON.stringify({ type: "quote", symbol, price: q1.price, feed: q1.priceFeedId }, null, 2)
       );
 
-      // Demo buy $1 path (capped) so proof is always produced in paper
-      const result = await agent.trade(symbol, "buy", Math.min(1, Number(process.env.DEMO_TRADE_USDC ?? "1")));
+      const result = await agent.trade(
+        symbol,
+        "buy",
+        Math.min(1, Number(process.env.DEMO_TRADE_USDC ?? "1"))
+      );
+      const trade = proofCapableResult(result);
+
       console.log(
         JSON.stringify(
           {
@@ -71,7 +80,7 @@ async function main() {
             price: result.price,
             orderId: result.orderId,
             txSignature: result.txSignature,
-            proof: result.proof,
+            proof: trade.proof,
           },
           null,
           2
@@ -98,7 +107,7 @@ async function main() {
       {
         type: "summary",
         portfolio: agent.getPortfolio(),
-        proofs: agent.getProofs(),
+        proofs: proofCapableAgent.getProofs?.() ?? [],
         executionMode: mode,
       },
       null,
