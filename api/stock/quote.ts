@@ -1,4 +1,4 @@
-import { getPythQuote, hasPythApiKey } from "../../src/market/pyth-client.js";
+import { getPaperQuote, getPythQuote, hasPythApiKey } from "../../src/market/pyth-client.js";
 
 const ALLOWED = new Set(["AAPL", "MSFT", "NVDA", "TSLA", "SPCX"]);
 
@@ -44,6 +44,24 @@ export default async function handler(req: any, res: any) {
       source: pythConfigured ? "pyth_pro" : "paper_fallback",
       error: safeMessage,
     });
+
+    // Pyth Pro can be configured correctly while an individual feed is
+    // entitlement-gated. Keep the demo usable, but never present paper data
+    // as live market data.
+    if (pythConfigured && /pyth_pro_http_403:Not entitled/i.test(message)) {
+      const quote = getPaperQuote(symbol);
+      res.status(200).json({
+        success: true,
+        source: "paper_fallback",
+        dataStatus: "DATA_RESTRICTED",
+        liveProvider: "pyth_pro",
+        liveAttempted: true,
+        restriction: "pyth_feed_entitlement",
+        error: safeMessage,
+        quote,
+      });
+      return;
+    }
 
     res.status(502).json({
       success: false,
