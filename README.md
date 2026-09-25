@@ -8,10 +8,10 @@
 
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://solana.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Swarm_Agent/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Swarm_Agent/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Swarm_Agent/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
 
-[**Live Dashboard**](https://wadezigh96.github.io/Swarm_Agent/index.html) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
+[**Live Dashboard**](https://swarm-agent-beta.vercel.app/) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
 
 </div>
 
@@ -165,7 +165,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/wadezigh96/Swarm_Agent.git
+git clone https://github.com/wadezigh96/Channel_Swarm.git
 cd Swarm_Agent
 npm install
 
@@ -189,7 +189,7 @@ Without a funded wallet, the demo safely remains in simulation mode.
 
 The repository includes a dedicated GitHub Pages dashboard:
 
-**https://wadezigh96.github.io/Swarm_Agent/index.html**
+**https://swarm-agent-beta.vercel.app/**
 
 The dashboard is intentionally separate from the repository page: it is the interactive product surface, while this README is the project/hackathon presentation layer.
 
@@ -245,9 +245,9 @@ docs/
 
 ## 📚 Links
 
-- [Repository](https://github.com/wadezigh96/Swarm_Agent)
-- [Live Dashboard](https://wadezigh96.github.io/Swarm_Agent/index.html)
-- [GitHub Actions](https://github.com/wadezigh96/Swarm_Agent/actions)
+- [Repository](https://github.com/wadezigh96/Channel_Swarm)
+- [Live Dashboard](https://swarm-agent-beta.vercel.app/)
+- [GitHub Actions](https://github.com/wadezigh96/Channel_Swarm/actions)
 - [Submission](SUBMISSION.md)
 - [Solana Payment Channels](https://github.com/solana-foundation/payment-channels)
 - [Program Explorer](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX)
