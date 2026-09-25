@@ -31,21 +31,22 @@ ChannelSwarm combines three rare capabilities:
 
 ### How to run
 ```bash
-git clone https://github.com/wadezigh96/Swarm_Agent.git
+git clone https://github.com/wadezigh96/Channel_Swarm.git
 cd Swarm_Agent
 npm install && npm run demo
 ```
 
 ### Links (paste into form)
-- **GitHub:** https://github.com/wadezigh96/Swarm_Agent
-- **Live dashboard:** https://wadezigh96.github.io/Swarm_Agent/index.html
+- **GitHub:** https://github.com/wadezigh96/Channel_Swarm
+- **Live dashboard:** https://swarm-agent-beta.vercel.app/
 - **Payment Channels program (Explorer):** https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
 - **Demo video:** (add your 60–90s Loom/YouTube link)
 
-### Tracks to select
-1. **Stocklana Main** (primary — deadline ~18 Sep 2026, 4pm ET)
-2. **Stocknized Agent / Clawpump-related bounty** (if listed)
-3. Register interest for **Agentic Payments** when the track goes live
+### Submission notes
+- **Stocklana Main:** primary track.
+- **Stocknized Agent:** paper-first Stocknized Agent flow with explicit execution modes and proofs.
+- **Agentic Payments:** Payment Channels + A2A voucher flow is included where applicable.
+- **Demo status:** simulation-first; paper stock data is clearly labeled and live tokenized-equity settlement is not claimed unless an execution proof is returned.
 
 ### Team
 Solo
