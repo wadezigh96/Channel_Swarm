@@ -32,7 +32,7 @@ ChannelSwarm combines three rare capabilities:
 ### How to run
 ```bash
 git clone https://github.com/wadezigh96/Channel_Swarm.git
-cd Swarm_Agent
+cd Channel_Swarm
 npm install && npm run demo
 ```
 
