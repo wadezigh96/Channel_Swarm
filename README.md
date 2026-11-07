@@ -26,7 +26,8 @@ It combines:
 - ⚡ **Payment Channels** — signed cumulative vouchers for micropayments
 - 🤖 **Agent Swarm** — payer, oracle and trading agents coordinating together
 - 🧠 **Vercel AI Gateway** — server-side intent routing that proposes an agent/action; it cannot execute payments or trades
-- 💰 **PayPal Sandbox Orders** — protected create-order and approval-gated capture endpoints
+- 💰 **PayPal Checkout (Sandbox)** — buyer approval, server-side order capture, and verified webhooks
+- 🪙 **PYUSD Mainnet** — wallet-signed Token-2022 transfers of PayPal USD on Solana Mainnet
 - 🛡️ **Reputation** — score-gated agent participation
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
@@ -40,7 +41,8 @@ It combines:
 | Module | What it does |
 |---|---|
 | **Agent Economy** | Coordinates Alpha, DataOracle and StockHunter |
-| **Payment Channels** | Opens channels and creates signed cumulative vouchers |
+| **Payment Channels** | Existing USDC channel escrow and signed cumulative vouchers remain intact |
+| **PYUSD Checkout** | Direct PayPal USD Token-2022 transfer to a configured Solana Mainnet treasury |
 | **Settlement** | Builds `settle`, `settleAndSeal` and close instructions |
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
@@ -51,7 +53,7 @@ It combines:
 
 ## 🔄 How it works
 
-**Intent → Reputation → Payment Channel → Voucher → Agent Resource → Settlement**
+**Intent → AI proposal → Reputation → Payment Channel / PYUSD Checkout → Agent Resource → Settlement**
 
 ```mermaid
 flowchart TB
@@ -77,6 +79,8 @@ flowchart TB
     end
 
     SOL["Solana wallet / funded payer"] -.->|SOL + USDC| PC
+    PY["Solana wallet with PYUSD"] -->|Token-2022 transfer| TREASURY["PYUSD Mainnet Treasury"]
+    PP["PayPal Sandbox buyer approval"] -->|Sandbox order capture| PAY["PayPal Developer Platform"]
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
@@ -113,16 +117,30 @@ curl -X POST http://localhost:3000/api/ai/decision \\
 The endpoint is intentionally protected and returns `503` if the AI Gateway model/auth configuration is missing.
 
 
-## 💰 PayPal Sandbox checkout
+## 💰 PayPal Checkout (Sandbox)
 
-The feature branch adds two protected serverless endpoints using PayPal Orders v2 in the Sandbox only:
+Open the buyer-facing checkout at `/checkout.html` or use the dashboard's Checkout link.
 
-- `POST /api/paypal/create-order` — validates a USD amount and creates a Sandbox order. The response includes an approval URL for the buyer.
-- `POST /api/paypal/capture-order` — requires `approvedByUser: true`, then retrieves the order and verifies `APPROVED` status plus exact amount/currency before capture.
+- `POST /api/paypal/create-order` creates a USD Sandbox order and binds it to a unique request ID plus the app's return/cancel URLs.
+- The buyer approves the order on PayPal Sandbox.
+- `POST /api/paypal/capture-order` retrieves the order, verifies `APPROVED` status, exact amount/currency and matching `custom_id`, then captures it with an idempotency key.
+- `POST /api/paypal/webhook` asks PayPal's Sandbox API to verify the webhook signature before acknowledging the event.
 
-Both endpoints require `Authorization: Bearer $CHANNELSWARM_API_TOKEN`. Configure `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` with Sandbox app credentials only. The code pins requests to `https://api-m.sandbox.paypal.com`; it has no live PayPal host option. Capture is not called by the AI model: the application must wait for buyer approval and a separate explicit confirmation. Idempotency uses `PayPal-Request-Id`.
+Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID` with Sandbox values. `APP_BASE_URL` is optional on Vercel (it can use the deployment URL) and should be set for a custom domain/local testing. All PayPal calls are pinned to `https://api-m.sandbox.paypal.com`; there is no PayPal Live host in this implementation. The checkout endpoints accept same-origin browser requests and never expose server credentials.
 
-Webhook signature verification and a buyer-facing checkout UI remain follow-up work; Sandbox API credentials are also required before an end-to-end test can run.
+## 🪙 PYUSD on Solana Mainnet
+
+ChannelSwarm also accepts **PayPal USD (PYUSD)** directly from a connected Solana wallet:
+
+- `POST /api/pyusd/create-payment` validates the payer, available Token-2022 balance and Mainnet mint, then returns an unsigned transaction for the wallet to review and sign.
+- The transaction creates the recipient's associated Token-2022 account if needed, performs `TransferChecked`, and includes a unique payment memo.
+- `POST /api/pyusd/verify-payment` checks a finalized Mainnet transaction, the payer signature, exact PYUSD mint, source/destination token accounts, amount, decimals and memo reference.
+- The checkout UI is `/checkout.html`; it supports Phantom or another compatible injected Solana wallet.
+
+Official Solana Mainnet PYUSD mint: `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` · Token-2022 · 6 decimals. The server rejects a different network, unexpected decimals, active transfer fees or transfer hooks it cannot safely resolve. Set `PYUSD_TREASURY_WALLET` to the receiving wallet and optionally `PYUSD_SOLANA_RPC_URL` to a reliable Mainnet RPC.
+
+**Important separation of rails:** PayPal Sandbox checkout is the required PayPal Developer Platform integration for this hackathon; it does not automatically convert fiat proceeds into PYUSD. PYUSD Mainnet checkout transfers PYUSD already held in the buyer's wallet. The original Payment Channels and 50-byte Ed25519 voucher utility remains USDC-based and unchanged; PYUSD is a separate direct-payment rail because the current Payment Channels instruction client uses the legacy SPL Token program, while PYUSD is a Token-2022 mint. No bridge or automatic fiat-to-PYUSD conversion is claimed.
+
 
 ## 💸 Payment Channel
 
@@ -190,6 +208,9 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | Agent swarm demo | ✅ |
 | Reputation gating | ✅ |
 | x402-style HTTP server | ✅ |
+| PayPal Sandbox checkout UI + Orders API | ✅ (credentials needed for live Sandbox run) |
+| PayPal webhook signature verification | ✅ (webhook ID needed) |
+| PYUSD Token-2022 Mainnet transaction builder + verifier | ✅ (treasury/RPC config and wallet needed for live Mainnet run) |
 | Automated tests | ✅ |
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
@@ -224,7 +245,7 @@ Without a funded wallet, the demo safely remains in simulation mode.
 
 The repository includes a dedicated web dashboard:
 
-**https://swarm-agent-beta.vercel.app/**
+**https://swarm-agent-beta.vercel.app/** · [**Checkout (PayPal Sandbox + PYUSD Mainnet)**](/checkout.html)
 
 The dashboard is intentionally separate from the repository page: it is the interactive product surface, while this README is the project/hackathon presentation layer.
 
