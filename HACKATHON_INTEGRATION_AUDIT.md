@@ -58,9 +58,9 @@ PYUSD is a separate direct-payment rail. The existing channel instruction builde
 
 ## Automated verification
 
-GitHub Actions passed on commit `8a6447e55adb95568add4c7b5c5d0e476f7892c1`:
+GitHub Actions passed on commit `27f054aa6be9154f32a639ec6a40fe11a9cfa5e6`:
 - `npm test`: 30 passed, 0 failed.
-- `npm run build`: passed, including typechecking the `api/**` Vercel functions.
+- `npm run build`: passed, including typechecking the `api/**` Vercel functions and the current PayPal `payment_source.paypal.experience_context` order request.
 
 This CI uses mocked AI and PayPal responses. It does not prove live AI Gateway credentials, PayPal Sandbox account configuration, webhook registration, wallet compatibility or a real PYUSD Mainnet payment.
 
