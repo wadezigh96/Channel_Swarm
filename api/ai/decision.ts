@@ -11,7 +11,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (Buffer.byteLength(JSON.stringify(req.body ?? {}), "utf8") > 8_192) {
       return res.status(413).json({ error: "request_too_large" });
     }
-    const decision = await decideAgentIntent(req.body);
+    // Vercel Functions expose the deployment OIDC token on each request header.
+    // Keep AI_GATEWAY_API_KEY as the local/non-Vercel fallback.
+    const oidcHeader = req.headers["x-vercel-oidc-token"];
+    const oidcToken = typeof oidcHeader === "string"
+      ? oidcHeader
+      : Array.isArray(oidcHeader) ? oidcHeader[0] : undefined;
+    const decision = await decideAgentIntent(req.body, {
+      apiKey: process.env.AI_GATEWAY_API_KEY || oidcToken || process.env.VERCEL_OIDC_TOKEN,
+    });
     return res.status(200).json({ decision });
   } catch (error) {
     if (error instanceof AiGatewayConfigurationError) return res.status(503).json({ error: "ai_runtime_not_configured" });
