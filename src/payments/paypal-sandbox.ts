@@ -85,10 +85,15 @@ export async function createPayPalSandboxOrder(
         invoice_id: input.requestId,
         amount: { currency_code: input.currency, value: input.amount },
       }],
-      application_context: {
-        return_url: `${appBaseUrl}/checkout.html?paypal=return`,
-        cancel_url: `${appBaseUrl}/checkout.html?paypal=cancel`,
-        user_action: "PAY_NOW",
+      payment_source: {
+        paypal: {
+          experience_context: {
+            return_url: `${appBaseUrl}/checkout.html?paypal=return`,
+            cancel_url: `${appBaseUrl}/checkout.html?paypal=cancel`,
+            user_action: "PAY_NOW",
+            shipping_preference: "NO_SHIPPING",
+          },
+        },
       },
     }),
   }, fetchImpl);
