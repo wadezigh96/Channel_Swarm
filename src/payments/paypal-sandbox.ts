@@ -1,8 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 const CreateOrderInput = z.object({
-  amount: z.string().regex(/^(?:0|[1-9]\\d{0,5})\\.\\d{2}$/),
+  amount: z.string().regex(/^(?:0|[1-9]\d{0,5})\.\d{2}$/),
   currency: z.literal("USD"),
   description: z.string().trim().min(3).max(120),
   requestId: z.string().regex(/^[A-Za-z0-9-]{8,38}$/),
@@ -10,7 +9,7 @@ const CreateOrderInput = z.object({
 
 const CaptureOrderInput = z.object({
   orderId: z.string().regex(/^[A-Z0-9-]{5,50}$/),
-  expectedAmount: z.string().regex(/^(?:0|[1-9]\\d{0,5})\\.\\d{2}$/),
+  expectedAmount: z.string().regex(/^(?:0|[1-9]\d{0,5})\.\d{2}$/),
   currency: z.literal("USD"),
   approvedByUser: z.literal(true),
   requestId: z.string().regex(/^[A-Za-z0-9-]{8,38}$/),
