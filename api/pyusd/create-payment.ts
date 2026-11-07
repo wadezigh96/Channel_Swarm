@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     if (error instanceof PyusdConfigurationError) return res.status(503).json({ error: "pyusd_mainnet_not_configured" });
     if (error instanceof Error && error.name === "ZodError") return res.status(400).json({ error: "invalid_request" });
-    if (error instanceof Error && /insufficient_pyusd_balance|payer_token_account|amount_out_of_range|amount_must|mint_changed|transfer_fee|transfer_hook/.test(error.message)) {
+    if (error instanceof Error && /insufficient_pyusd_balance|payer_token_account|payer_pyusd_account_not_found|invalid_payer_public_key|treasury_must_be|amount_out_of_range|amount_must|mint_changed|transfer_fee|transfer_hook/.test(error.message)) {
       return res.status(422).json({ error: error.message });
     }
     return res.status(502).json({ error: "pyusd_payment_prepare_failed" });
