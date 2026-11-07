@@ -49,6 +49,10 @@ test("PYUSD verifier accepts only the exact payer, recipient, mint, amount and m
         accountKeys: [{ pubkey: payer, signer: true }],
         instructions: [
           {
+            programId: MEMO_PROGRAM_ID,
+            parsed: `channelswarm:pyusd:${requestId}`,
+          },
+          {
             programId: TOKEN_2022_PROGRAM_ID,
             parsed: {
               type: "transferChecked",
@@ -59,12 +63,6 @@ test("PYUSD verifier accepts only the exact payer, recipient, mint, amount and m
                 mint: PYUSD_MAINNET_MINT.toBase58(),
                 tokenAmount: { amount: amountAtomic.toString(), decimals: 6, uiAmountString: "4.25" },
               },
-            },
-          },
-          {
-            programId: MEMO_PROGRAM_ID,
-            parsed: `channelswarm:pyusd:${requestId}`,
-          },
         ],
       },
     },
