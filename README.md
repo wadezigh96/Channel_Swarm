@@ -26,6 +26,7 @@ It combines:
 - ⚡ **Payment Channels** — signed cumulative vouchers for micropayments
 - 🤖 **Agent Swarm** — payer, oracle and trading agents coordinating together
 - 🧠 **Vercel AI Gateway** — server-side intent routing that proposes an agent/action; it cannot execute payments or trades
+- 💰 **PayPal Sandbox Orders** — protected create-order and approval-gated capture endpoints
 - 🛡️ **Reputation** — score-gated agent participation
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
@@ -110,6 +111,18 @@ curl -X POST http://localhost:3000/api/ai/decision \\
 ```
 
 The endpoint is intentionally protected and returns `503` if the AI Gateway model/auth configuration is missing.
+
+
+## 💰 PayPal Sandbox checkout
+
+The feature branch adds two protected serverless endpoints using PayPal Orders v2 in the Sandbox only:
+
+- `POST /api/paypal/create-order` — validates a USD amount and creates a Sandbox order. The response includes an approval URL for the buyer.
+- `POST /api/paypal/capture-order` — requires `approvedByUser: true`, then retrieves the order and verifies `APPROVED` status plus exact amount/currency before capture.
+
+Both endpoints require `Authorization: Bearer $CHANNELSWARM_API_TOKEN`. Configure `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` with Sandbox app credentials only. The code pins requests to `https://api-m.sandbox.paypal.com`; it has no live PayPal host option. Capture is not called by the AI model: the application must wait for buyer approval and a separate explicit confirmation. Idempotency uses `PayPal-Request-Id`.
+
+Webhook signature verification and a buyer-facing checkout UI remain follow-up work; Sandbox API credentials are also required before an end-to-end test can run.
 
 ## 💸 Payment Channel
 
