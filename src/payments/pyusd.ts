@@ -191,7 +191,8 @@ export function verifyPyusdParsedTransaction(
   transaction: any,
   args: { payer: PublicKey; recipient: PublicKey; amountAtomic: bigint; requestId: string },
 ) {
-  if (!transaction || transaction.meta?.err) throw new Error("transaction_failed_or_not_found");
+  if (!transaction) throw new Error("transaction_not_finalized");
+  if (transaction.meta?.err) throw new Error("transaction_failed");
 
   const accountKeys = transaction.transaction?.message?.accountKeys ?? [];
   const payerSigned = accountKeys.some((key: any) =>
