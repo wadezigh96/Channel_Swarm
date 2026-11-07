@@ -16,3 +16,5 @@ export type { Voucher, OpenedChannel, ChannelConfig, OpenChannelParams } from ".
 
 export { decideAgentIntent, AiGatewayConfigurationError } from "./ai/gateway.js";
 export type { AgentIntentInput, AgentIntentDecision } from "./ai/gateway.js";
+
+export { createPayPalSandboxOrder, capturePayPalSandboxOrder, PayPalConfigurationError } from "./payments/paypal-sandbox.js";
