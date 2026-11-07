@@ -153,7 +153,7 @@ export async function createPyusdPayment(rawInput: unknown) {
   const sourceAccount = await getAccount(
     connection, sourceAta, "confirmed", TOKEN_2022_PROGRAM_ID,
   );
-  if (!sourceAccount.owner.equals(payer)) throw new Error("payer_token_account_owner_mismatch");
+  if (!sourceAccount.owner.equals(payer) || !sourceAccount.mint.equals(PYUSD_MAINNET_MINT)) throw new Error("payer_token_account_owner_or_mint_mismatch");
   if (sourceAccount.amount < amountAtomic) throw new Error("insufficient_pyusd_balance");
 
   const latest = await connection.getLatestBlockhash("confirmed");
