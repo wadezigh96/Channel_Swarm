@@ -11,7 +11,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
 
-[**Existing Dashboard (main deployment)**](https://swarm-agent-beta.vercel.app/) · [**Checkout source**](docs/checkout.html) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
+[**Existing Dashboard (main deployment)**](https://swarm-agent-beta.vercel.app/) · [**Checkout source**](docs/checkout.html) · [**Environment Setup**](ENV_SETUP.md) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
 
 </div>
 
