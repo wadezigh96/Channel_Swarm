@@ -21,9 +21,9 @@ Existing capabilities:
 - A static HTML dashboard and simulation demo.
 
 AI runtime finding:
-- No AI model SDK, LLM provider client, inference endpoint, model configuration, or AI-related environment variable was found in the reviewed runtime files.
+- Initial audit found no AI model integration; the Vercel AI Gateway service and protected inference endpoint have since been added on this feature branch.
 - Existing deterministic stock rules and reputation logic are not an AI model integration and must not be presented as one.
-- The repository's current agent names/orchestration do not by themselves satisfy the hackathon's meaningful-AI requirement.
+- The AI routing integration is present in source but remains unverified against a live Gateway model until credentials are configured and the endpoint is exercised.
 
 PayPal runtime finding:
 - No PayPal SDK, Orders API client, checkout route, webhook verification, or PayPal environment variables were found in the reviewed files.
@@ -38,12 +38,12 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 
 ## Vercel AI Gateway implementation added on feature branch
 
-- Added \`src/ai/gateway.ts\` to call the Vercel AI Gateway OpenAI-compatible endpoint and validate a constrained agent-routing proposal.
-- Added \`api/ai/decision.ts\` as a protected Vercel serverless endpoint (\`POST /api/ai/decision\`) using bearer-token authorization.
+- Added `src/ai/gateway.ts` to call the Vercel AI Gateway OpenAI-compatible endpoint and validate a constrained agent-routing proposal.
+- Added `api/ai/decision.ts` as a protected Vercel serverless endpoint (`POST /api/ai/decision`) using bearer-token authorization.
 - Added mocked tests for valid proposals, missing credentials, unavailable agent roles, and mandatory human approval.
 - Added server-side environment placeholders and README setup notes.
 - AI output is advisory only: it cannot sign, transfer, trade, settle, or capture payments.
-- Authentication supports \`AI_GATEWAY_API_KEY\` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
+- Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
 - Tests/build have not yet been executed in this environment; no Vercel deployment has been created.
 
 ## Proposed PayPal implementation (still pending)
@@ -59,7 +59,7 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 4. Keep Solana Payment Channels as the agent-to-agent micropayment layer; clearly distinguish simulation from on-chain settlement.
 5. Add tests using mocked model and PayPal sandbox responses. Never put credentials in source control.
 
-## Blocker / decision required
+## Remaining setup and verification
 
 The AI runtime decision is resolved: Vercel AI Gateway is selected. Configure a supported model ID, AI Gateway API key or Vercel OIDC, and a separate CHANNELSWARM_API_TOKEN before exercising the protected endpoint.
 
