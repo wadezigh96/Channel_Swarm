@@ -97,7 +97,7 @@ flowchart TB
 
 ## 🧠 AI intent routing (Vercel AI Gateway)
 
-The serverless endpoint `POST /api/ai/decision` is demonstrated in `/checkout.html`: enter a task and the project API token to ask Vercel AI Gateway which available agent should handle the intent. It returns a constrained JSON proposal (`routeTo`, `action`, `confidence`, `rationale`) and always sets `requiresHumanApproval: true`. It does not sign transactions, open channels, execute trades, settle vouchers, or capture payments.
+The serverless endpoint `POST /api/ai/decision` is demonstrated in `/checkout.html`: enter a task and the project API token to ask Vercel AI Gateway which available agent should handle the intent. It returns a constrained JSON proposal (`routeTo`, `action`, `paymentRail`, `confidence`, `rationale`) and always sets `requiresHumanApproval: true`. The model can recommend PayPal Sandbox, PYUSD Mainnet, or the existing channel-voucher rail; the user still chooses and approves the actual payment. It does not sign transactions, open channels, execute trades, settle vouchers, or capture payments.
 
 Configure these server-side environment variables in Vercel:
 
