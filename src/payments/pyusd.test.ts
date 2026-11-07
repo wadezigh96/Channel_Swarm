@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
@@ -63,6 +63,8 @@ test("PYUSD verifier accepts only the exact payer, recipient, mint, amount and m
                 mint: PYUSD_MAINNET_MINT.toBase58(),
                 tokenAmount: { amount: amountAtomic.toString(), decimals: 6, uiAmountString: "4.25" },
               },
+            },
+          },
         ],
       },
     },
