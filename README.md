@@ -97,7 +97,7 @@ flowchart TB
 
 ## 🧠 AI intent routing (Vercel AI Gateway)
 
-The optional serverless endpoint `POST /api/ai/decision` uses Vercel AI Gateway to propose which available agent should handle an intent. It returns a constrained JSON proposal (`routeTo`, `action`, `confidence`, `rationale`) and always sets `requiresHumanApproval: true`. It does not sign transactions, open channels, execute trades, settle vouchers, or capture payments.
+The serverless endpoint `POST /api/ai/decision` is demonstrated in `/checkout.html`: enter a task and the project API token to ask Vercel AI Gateway which available agent should handle the intent. It returns a constrained JSON proposal (`routeTo`, `action`, `confidence`, `rationale`) and always sets `requiresHumanApproval: true`. It does not sign transactions, open channels, execute trades, settle vouchers, or capture payments.
 
 Configure these server-side environment variables in Vercel:
 
@@ -126,7 +126,7 @@ Open the buyer-facing checkout at `/checkout.html` or use the dashboard's Checko
 - `POST /api/paypal/capture-order` retrieves the order, verifies `APPROVED` status, exact amount/currency and matching `custom_id`, then captures it with an idempotency key.
 - `POST /api/paypal/webhook` asks PayPal's Sandbox API to verify the webhook signature before acknowledging the event.
 
-Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID` with Sandbox values. `APP_BASE_URL` is optional on Vercel (it can use the deployment URL) and should be set for a custom domain/local testing. All PayPal calls are pinned to `https://api-m.sandbox.paypal.com`; there is no PayPal Live host in this implementation. The checkout endpoints accept same-origin browser requests and never expose server credentials.
+Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and `PAYPAL_WEBHOOK_ID` with Sandbox values. In the PayPal Developer Dashboard, add a Sandbox webhook pointing to `${APP_BASE_URL}/api/paypal/webhook` and subscribe to `CHECKOUT.ORDER.APPROVED`, `CHECKOUT.PAYMENT-APPROVAL.REVERSED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.COMPLETED`, and `PAYMENT.CAPTURE.DENIED`; save the returned webhook ID as `PAYPAL_WEBHOOK_ID`. `APP_BASE_URL` is optional on Vercel (it can use the deployment URL) and should be set for a custom domain/local testing. All PayPal calls are pinned to `https://api-m.sandbox.paypal.com`; there is no PayPal Live host in this implementation. The checkout endpoints accept same-origin browser requests and never expose server credentials. The webhook currently verifies and acknowledges events but does not persist a fulfillment ledger; do not unlock valuable resources from webhook logs alone.
 
 ## 🪙 PYUSD on Solana Mainnet
 
@@ -137,7 +137,7 @@ ChannelSwarm also accepts **PayPal USD (PYUSD)** directly from a connected Solan
 - `POST /api/pyusd/verify-payment` checks a finalized Mainnet transaction, the payer signature, exact PYUSD mint, source/destination token accounts, amount, decimals and memo reference.
 - The checkout UI is `/checkout.html`; it supports Phantom or another compatible injected Solana wallet.
 
-Official Solana Mainnet PYUSD mint: `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` · Token-2022 · 6 decimals. The server rejects a different network, unexpected decimals, active transfer fees or transfer hooks it cannot safely resolve. Set `PYUSD_TREASURY_WALLET` to the receiving wallet and optionally `PYUSD_SOLANA_RPC_URL` to a reliable Mainnet RPC.
+Official Solana Mainnet PYUSD mint: `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` · Token-2022 · 6 decimals. The server rejects a different network, unexpected decimals, active transfer fees or transfer hooks it cannot safely resolve. Set `PYUSD_TREASURY_WALLET` to the receiving wallet and optionally `PYUSD_SOLANA_RPC_URL` to a reliable Mainnet RPC. Payment verification is repeatable and currently has no durable database-backed one-time fulfillment ledger.
 
 **Important separation of rails:** PayPal Sandbox checkout is the required PayPal Developer Platform integration for this hackathon; it does not automatically convert fiat proceeds into PYUSD. PYUSD Mainnet checkout transfers PYUSD already held in the buyer's wallet. The original Payment Channels and 50-byte Ed25519 voucher utility remains USDC-based and unchanged; PYUSD is a separate direct-payment rail because the current Payment Channels instruction client uses the legacy SPL Token program, while PYUSD is a Token-2022 mint. No bridge or automatic fiat-to-PYUSD conversion is claimed.
 
