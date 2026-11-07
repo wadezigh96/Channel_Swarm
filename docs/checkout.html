@@ -235,7 +235,7 @@ $("aiButton").addEventListener("click", async () => {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `AI request failed (${response.status})`);
     const d = payload.decision;
-    setStatus("aiStatus", `Suggested agent: ${d.routeTo} · Action: ${d.action} · Confidence: ${Math.round(d.confidence * 100)}% · Human approval: required. ${d.rationale}`);
+    setStatus("aiStatus", `Suggested agent: ${d.routeTo} · Action: ${d.action} · Confidence: ${Math.round(d.confidence * 100)}% · Payment rail: ${d.paymentRail} · Human approval: required. ${d.rationale}`);
   } catch (error) {
     setStatus("aiStatus", error.message);
   } finally {
