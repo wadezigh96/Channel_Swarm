@@ -26,19 +26,19 @@ PYUSD is a separate direct-payment rail. The existing channel instruction builde
 ### Vercel AI Gateway
 
 - `src/ai/gateway.ts` calls the Vercel AI Gateway Chat Completions endpoint.
-- Default model: `nvidia/nemotron-3.5-lightning-free`; `AI_GATEWAY_MODEL` can override it.
+- Default model: `nvidia/nemotron-3-nano-30b-a3b`; `AI_GATEWAY_MODEL` can override it.
 - The model proposes an available agent and payment rail: PayPal Sandbox, PYUSD Mainnet, existing channel voucher, or none.
 - Output is schema-validated; payment-rail/action combinations are checked; every response requires human approval.
 - The AI endpoint cannot sign, transfer, trade, settle, capture or broadcast.
 - `/checkout.html` contains the interactive AI routing control. The operator enters the project API token; the page does not persist it.
 - Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC.
-- Privacy warning is displayed: the free NVIDIA model may log prompts and outputs for model improvement. Do not submit personal, confidential or secret data.
+- Privacy guidance is displayed: provider data-retention terms can vary; use non-sensitive demo text and never submit personal, confidential or secret data.
 
 ### PayPal Developer Platform — Sandbox
 
 - Buyer-facing checkout page at `docs/checkout.html`.
 - PayPal Orders v2 Sandbox create-order and capture endpoints.
-- Buyer return flow is bound to a unique request ID; capture verifies order status, exact USD amount/currency and `custom_id` before capture.
+- Buyer return flow is bound to a unique request ID; capture verifies order status, exact USD amount/currency, `custom_id` and `invoice_id` request references before capture.
 - Uses `PayPal-Request-Id` idempotency.
 - Webhook endpoint calls PayPal's webhook-signature verification API before acknowledging/logging an event.
 - All PayPal API calls are pinned to `https://api-m.sandbox.paypal.com`; no PayPal Live path exists.
@@ -58,7 +58,7 @@ PYUSD is a separate direct-payment rail. The existing channel instruction builde
 
 ## Automated verification
 
-GitHub Actions passed on commit `27f054aa6be9154f32a639ec6a40fe11a9cfa5e6`:
+GitHub Actions passed on commit `a3b5c80dc20ed3d8e7523b020eef12066e126ed6`:
 - `npm test`: 30 passed, 0 failed.
 - `npm run build`: passed, including typechecking the `api/**` Vercel functions and the current PayPal `payment_source.paypal.experience_context` order request.
 
@@ -80,11 +80,11 @@ Also not present as project variables:
 - `PYUSD_SOLANA_RPC_URL` (optional; code falls back to public Mainnet RPC, which may be rate-limited).
 - `APP_BASE_URL` (optional on Vercel; current deployment URL is used).
 
-The model has a code default, so `AI_GATEWAY_MODEL` is optional.
+`AI_GATEWAY_MODEL` is configured in Vercel Preview for `feat/paypal-ai-hackathon` as `nvidia/nemotron-3-nano-30b-a3b`; the code has the same fallback. Vercel OIDC token availability has not yet been confirmed in a deployed runtime.
 
 ## Remaining before Devpost submission
 
-1. Set `CHANNELSWARM_API_TOKEN` in Vercel Preview and confirm AI Gateway OIDC or API-key authentication.
+1. Set `CHANNELSWARM_API_TOKEN` in Vercel Preview and confirm AI Gateway OIDC or API-key authentication. The model name is already configured for this branch; no live inference call has been made.
 2. Add PayPal Sandbox client ID/secret, register the Sandbox webhook and set its webhook ID; run buyer approval/capture end-to-end.
 3. Set the public `PYUSD_TREASURY_WALLET` and reliable Mainnet RPC; independently check the recipient address. Only then, and only with explicit operator approval, run a tiny real Mainnet payment.
 4. Add durable storage and one-time idempotent fulfillment before using payment verification to unlock valuable services.
@@ -96,4 +96,4 @@ The model has a code default, so `AI_GATEWAY_MODEL` is optional.
 - https://paypalaihackathon.devpost.com/
 - https://paypalaihackathon.devpost.com/rules
 
-The existing Vercel dashboard deployment is from the main branch and does not include these unmerged changes. The feature branch has not been deployed. The repository includes `ENV_SETUP.md`, `SUBMISSION.md` and `DEMO_SCRIPT.md` for local judge setup and submission preparation.
+The existing Vercel dashboard deployment is from the main branch and does not include these unmerged changes. The feature branch has not been deployed. Project settings currently report SSO protection enabled for `all_except_custom_domains`, so a future `vercel.app` preview may require Vercel team authentication. The repository includes `ENV_SETUP.md`, `SUBMISSION.md` and `DEMO_SCRIPT.md` for local judge setup and submission preparation.
