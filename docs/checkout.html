@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChannelSwarm · PayPal + PYUSD Checkout</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#08090b;color:#f4f4f5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% 0%,#18251b 0,transparent 45%),#08090b}
+main{max-width:920px;margin:auto;padding:28px 18px 70px}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #282b2c;padding:16px 0}
+.brand{font-weight:800;letter-spacing:.12em}.sub{font-size:11px;color:#8b9490;margin-top:4px}.link{color:#a3e635;text-decoration:none;font-size:12px}
+h1{font-size:clamp(34px,7vw,58px);letter-spacing:-.05em;line-height:1.02;margin:48px 0 12px}.lead{color:#9ba39e;line-height:1.7;max-width:700px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}.card{background:#101412;border:1px solid #29332c;border-radius:16px;padding:22px}.eyebrow{font-size:10px;letter-spacing:.16em;color:#9ba99f}.card h2{font-size:22px;margin:12px 0}.muted{font-size:13px;line-height:1.65;color:#9ba39e}
+label{display:block;font-size:12px;color:#c4ccc7;margin:18px 0 7px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #3b4840;background:#090d0a;color:#fff;font-size:16px}
+button{width:100%;padding:13px;border:0;border-radius:9px;background:#b7ef70;color:#11180e;font-weight:800;margin-top:14px;cursor:pointer}button.secondary{background:#d8dce0;color:#121416}
+button:disabled{opacity:.45;cursor:not-allowed}.status{min-height:44px;margin-top:14px;font-size:12px;line-height:1.6;color:#b7ef70;overflow-wrap:anywhere}.small{font-size:11px;color:#727e76;line-height:1.6;margin-top:12px}.pill{display:inline-block;border:1px solid #35463a;border-radius:99px;padding:5px 9px;color:#b7ef70;font-size:10px}
+.note{margin-top:18px;border:1px solid #4c4123;background:#1a170e;color:#d7c99a;padding:14px;border-radius:10px;font-size:12px;line-height:1.7}
+footer{margin-top:34px;border-top:1px solid #282b2c;padding-top:18px;color:#727e76;font-size:11px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;gap:12px;flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+  <nav class="top">
+    <div><div class="brand">CHANNELSWARM</div><div class="sub">AGENT ECONOMY · PAYMENT CHANNELS · PYUSD</div></div>
+    <a class="link" href="/">← Back to dashboard</a>
+  </nav>
+  <h1>Pay agents.<br><span style="color:#b7ef70">Settle in dollars.</span></h1>
+  <p class="lead">Two complementary payment rails: PayPal Checkout in Sandbox for the hackathon's PayPal Developer Platform requirement, and real PYUSD transfers on Solana Mainnet for wallet-native settlement. The existing USDC Payment Channels and signed voucher flow remain available for agent-to-agent micropayments.</p>
+
+  <section class="grid">
+    <article class="card">
+      <span class="pill">PAYPAL DEVELOPER PLATFORM · SANDBOX</span>
+      <h2>PayPal Checkout</h2>
+      <p class="muted">Test the fiat checkout and buyer approval flow with PayPal Sandbox. This is a sandbox payment, not an on-chain PYUSD transfer.</p>
+      <label for="paypalAmount">Amount (USD)</label>
+      <input id="paypalAmount" type="number" min="1" max="10000" step="0.01" value="4.00">
+      <button id="paypalButton" class="secondary">Continue with PayPal Sandbox</button>
+      <div id="paypalStatus" class="status" role="status" aria-live="polite"></div>
+      <p class="small">Sandbox credentials are required on the server. After buyer approval, the return flow verifies the order and captures it. Webhook signatures are verified separately.</p>
+    </article>
+
+    <article class="card">
+      <span class="pill">SOLANA MAINNET · TOKEN-2022</span>
+      <h2>Pay with PYUSD</h2>
+      <p class="muted">Connect a Solana wallet holding authentic PYUSD. The app prepares a transfer; your wallet displays the transaction and you approve it yourself.</p>
+      <label for="pyusdAmount">Amount (PYUSD)</label>
+      <input id="pyusdAmount" type="number" min="0.01" max="10000" step="0.01" value="1.00">
+      <button id="pyusdButton">Connect wallet & pay PYUSD</button>
+      <div id="pyusdStatus" class="status" role="status" aria-live="polite"></div>
+      <p class="small">Requires PYUSD and SOL for network fees. Mainnet transaction is irreversible. Check the recipient address in your wallet before approving.</p>
+    </article>
+  </section>
+
+  <div class="note"><strong>Important:</strong> PYUSD is PayPal-branded USD stablecoin issued by Paxos, not a PayPal fiat balance sitting directly on Solana. PayPal Sandbox checkout does not automatically convert or bridge funds into PYUSD. The Mainnet rail only transfers PYUSD already held by the connected wallet.</div>
+
+  <footer>
+    <div>PYUSD Solana Mainnet mint: <span id="mint">2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo</span> · 6 decimals · Token-2022</div>
+    <div style="margin-top:8px"><a class="link" href="https://solana.com/pyusd" target="_blank" rel="noreferrer">PYUSD on Solana</a> · <a class="link" href="https://developer.paypal.com/checkout/integrate" target="_blank" rel="noreferrer">PayPal Checkout docs</a></div>
+  </footer>
+</main>
+
+<script type="module">
+import { Transaction } from "https://esm.sh/@solana/web3.js@1.98.0";
+
+const $ = (id) => document.getElementById(id);
+const setStatus = (id, text) => { $(id).textContent = text; };
+const money = (value) => Number(value).toFixed(2);
+
+async function jsonPost(path, body) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || \`Request failed (\${response.status})\`);
+  return payload;
+}
+
+$("paypalButton").addEventListener("click", async () => {
+  const button = $("paypalButton");
+  try {
+    button.disabled = true;
+    setStatus("paypalStatus", "Creating PayPal Sandbox order…");
+    const amount = money($("paypalAmount").value);
+    if (!Number.isFinite(Number(amount)) || Number(amount) < 1 || Number(amount) > 10000) {
+      throw new Error("Enter an amount from $1.00 to $10,000.00.");
+    }
+    const requestId = crypto.randomUUID();
+    const { order } = await jsonPost("/api/paypal/create-order", {
+      amount, currency: "USD", description: "ChannelSwarm agent service payment", requestId,
+    });
+    if (!order.approvalUrl) throw new Error("PayPal did not return an approval URL.");
+    sessionStorage.setItem("channelswarm-paypal-pending", JSON.stringify({
+      orderId: order.id, amount, requestId,
+    }));
+    setStatus("paypalStatus", "Opening PayPal Sandbox approval…");
+    location.assign(order.approvalUrl);
+  } catch (error) {
+    setStatus("paypalStatus", error.message);
+    button.disabled = false;
+  }
+});
+
+async function finishPayPalReturn() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("paypal") === "cancel") {
+    sessionStorage.removeItem("channelswarm-paypal-pending");
+    setStatus("paypalStatus", "PayPal Sandbox checkout was cancelled. No capture was made.");
+    return;
+  }
+  if (params.get("paypal") !== "return") return;
+  const pending = JSON.parse(sessionStorage.getItem("channelswarm-paypal-pending") || "null");
+  const orderId = params.get("token");
+  if (!pending || !orderId || orderId !== pending.orderId) {
+    setStatus("paypalStatus", "Could not match the returned PayPal order to this browser session.");
+    return;
+  }
+  try {
+    setStatus("paypalStatus", "Buyer approval received. Verifying order and capturing Sandbox payment…");
+    const result = await jsonPost("/api/paypal/capture-order", {
+      orderId, expectedAmount: pending.amount, currency: "USD",
+      approvedByUser: true, requestId: pending.requestId,
+    });
+    sessionStorage.removeItem("channelswarm-paypal-pending");
+    setStatus("paypalStatus", \`Sandbox capture \${result.capture.status}. Order: \${result.capture.id}\`);
+    history.replaceState({}, "", "/checkout.html");
+  } catch (error) {
+    setStatus("paypalStatus", error.message);
+  }
+}
+
+$("pyusdButton").addEventListener("click", async () => {
+  const button = $("pyusdButton");
+  try {
+    button.disabled = true;
+    setStatus("pyusdStatus", "Looking for a Solana wallet…");
+    const provider = window.phantom?.solana || window.solana;
+    if (!provider?.isPhantom && !provider?.connect) {
+      throw new Error("No compatible injected Solana wallet found. Open this page in Phantom or another wallet browser.");
+    }
+    const connected = await provider.connect();
+    const payer = connected.publicKey?.toString() || provider.publicKey?.toString();
+    if (!payer) throw new Error("Wallet did not return a public key.");
+    const amount = money($("pyusdAmount").value);
+    if (!Number.isFinite(Number(amount)) || Number(amount) < 0.01 || Number(amount) > 10000) {
+      throw new Error("Enter an amount from 0.01 to 10,000.00 PYUSD.");
+    }
+
+    setStatus("pyusdStatus", "Preparing a Token-2022 transaction on Solana Mainnet…");
+    const { payment } = await jsonPost("/api/pyusd/create-payment", { payer, amount });
+    const bytes = Uint8Array.from(atob(payment.unsignedTransaction), (char) => char.charCodeAt(0));
+    const transaction = Transaction.from(bytes);
+
+    setStatus("pyusdStatus", "Review the PYUSD transfer and network fee in your wallet, then approve it.");
+    const sent = await provider.signAndSendTransaction(transaction);
+    const signature = typeof sent === "string" ? sent : sent.signature;
+    if (!signature) throw new Error("Wallet did not return a transaction signature.");
+
+    setStatus("pyusdStatus", "Transaction submitted. Waiting for Solana finality…");
+    let lastError = "transaction_not_finalized";
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        const verified = await jsonPost("/api/pyusd/verify-payment", {
+          payer, amount, signature, requestId: payment.requestId,
+        });
+        setStatus("pyusdStatus", \`Verified \${verified.payment.amount} PYUSD on Solana Mainnet. \${verified.payment.signature}\`);
+        const link = document.createElement("a");
+        link.className = "link";
+        link.href = verified.payment.explorerUrl;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = "View finalized transaction on Solana Explorer";
+        $("pyusdStatus").append(document.createElement("br"), link);
+        return;
+      } catch (error) {
+        lastError = error.message;
+        if (!/not_finalized|not_found/.test(lastError)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+    throw new Error(\`Still waiting for finality. Check the signature in Solana Explorer: \${signature}\`);
+  } catch (error) {
+    setStatus("pyusdStatus", error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+finishPayPalReturn();
+</script>
+</body>
+</html>
