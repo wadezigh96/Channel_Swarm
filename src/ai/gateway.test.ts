@@ -34,6 +34,7 @@ test("AI Gateway request returns a validated agent proposal", async () => {
 
   assert.equal(requestedUrl, "https://ai-gateway.vercel.sh/v1/chat/completions");
   assert.equal(requestBody.model, "test/provider-model");
+  assert.match(requestBody.messages[0].content, /prepare_payment/);
   assert.equal(result.routeTo, "data");
   assert.equal(result.requiresHumanApproval, true);
 });
