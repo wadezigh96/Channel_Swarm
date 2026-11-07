@@ -46,7 +46,7 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 - Added server-side environment placeholders and README setup notes.
 - AI output is advisory only: it cannot sign, transfer, trade, settle, or capture payments.
 - Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
-- Tests/build have not yet been executed in this environment; no Vercel deployment has been created.
+- The CI workflow now runs on pushes to this feature branch and includes the AI Gateway + PayPal mocked tests and TypeScript build. No Vercel deployment has been created.
 
 ## Remaining PayPal work
 
