@@ -106,7 +106,7 @@ export function buildPyusdTransferTransaction(args: {
     new TransactionInstruction({
       programId: MEMO_PROGRAM_ID,
       keys: [],
-      data: Buffer.from(\`channelswarm:pyusd:\${args.requestId}\`, "utf8"),
+      data: Buffer.from(`channelswarm:pyusd:${args.requestId}`, "utf8"),
     }),
   );
   return transaction;
@@ -210,7 +210,7 @@ export function verifyPyusdParsedTransaction(
     ...(transaction.transaction.message.instructions ?? []),
     ...(transaction.meta.innerInstructions ?? []).flatMap((group: any) => group.instructions ?? []),
   ];
-  const expectedMemo = \`channelswarm:pyusd:\${args.requestId}\`;
+  const expectedMemo = `channelswarm:pyusd:${args.requestId}`;
   const memoFound = instructions.some((instruction: any) => {
     if (!instruction.programId || !new PublicKey(instruction.programId).equals(MEMO_PROGRAM_ID)) return false;
     if (typeof instruction.parsed === "string") return instruction.parsed === expectedMemo;
@@ -277,6 +277,6 @@ export async function verifyPyusdPayment(rawInput: unknown) {
     requestId: input.requestId,
     amount: input.amount,
     signature: input.signature,
-    explorerUrl: \`https://explorer.solana.com/tx/\${input.signature}\`,
+    explorerUrl: `https://explorer.solana.com/tx/${input.signature}`,
   };
 }
