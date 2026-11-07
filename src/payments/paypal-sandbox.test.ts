@@ -61,7 +61,7 @@ test("PayPal capture proceeds only for approved exact-value sandbox order", asyn
   process.env.PAYPAL_CLIENT_SECRET = "sandbox-secret";
   const mock = mockFetch([
     { access_token: "mock-access-token" },
-    { id: "ORDER-12345", status: "APPROVED", purchase_units: [{ custom_id: "capture-req-1234", amount: { currency_code: "USD", value: "4.00" } }] },
+    { id: "ORDER-12345", status: "APPROVED", purchase_units: [{ custom_id: "capture-req-1234", invoice_id: "capture-req-1234", amount: { currency_code: "USD", value: "4.00" } }] },
     { access_token: "mock-access-token-2" },
     { id: "ORDER-12345", status: "COMPLETED" },
   ]);
