@@ -206,6 +206,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | `settleAndSeal` instruction builder | ✅ |
 | `requestClose` path | ✅ |
 | Agent swarm demo | ✅ |
+| Vercel AI Gateway agent + payment-rail routing | ✅ (model default; auth token required) |
 | Reputation gating | ✅ |
 | x402-style HTTP server | ✅ |
 | PayPal Sandbox checkout UI + Orders API | ✅ (credentials needed for live Sandbox run) |
@@ -242,13 +243,13 @@ Without a funded wallet, the demo safely remains in simulation mode. For the ful
 
 ---
 
-## 🖥️ Dashboard
+## 🖥️ Dashboard and checkout
 
-The repository includes a dedicated web dashboard:
+- Existing main-branch dashboard: https://swarm-agent-beta.vercel.app/ (this deployment does not include the unmerged feature-branch checkout changes).
+- Current branch checkout source: [`docs/checkout.html`](docs/checkout.html).
+- To run the current branch with its API routes, configure `.env.local`, run `npx vercel dev`, and open `http://localhost:3000/checkout.html`.
 
-**https://swarm-agent-beta.vercel.app/** · [**Checkout (PayPal Sandbox + PYUSD Mainnet)**](/checkout.html)
-
-The dashboard is intentionally separate from the repository page: it is the interactive product surface, while this README is the project/hackathon presentation layer.
+The feature branch has not been deployed. The functional-demo path for judges is the complete local setup in [`ENV_SETUP.md`](ENV_SETUP.md).
 
 ---
 
@@ -256,8 +257,18 @@ The dashboard is intentionally separate from the repository page: it is the inte
 
 ```
 src/
+├── ai/
+│   ├── gateway.ts
+│   └── gateway.test.ts
+├── security/
+│   ├── api-auth.ts
+│   └── origin.ts
 ├── payments/
 │   ├── channel-manager.ts
+│   ├── paypal-sandbox.ts
+│   ├── paypal-sandbox.test.ts
+│   ├── pyusd.ts
+│   └── pyusd.test.ts
 │   ├── instructions.ts
 │   ├── voucher.test.ts
 │   ├── x402-server.ts
@@ -284,8 +295,14 @@ examples/
 ├── verify-backpack-stocks.ts
 └── x402-demo.ts
 
+api/
+├── ai/decision.ts
+├── paypal/{create-order,capture-order,webhook}.ts
+└── pyusd/{create-payment,verify-payment}.ts
+
 docs/
-└── index.html
+├── index.html
+└── checkout.html
 ```
 
 ---
