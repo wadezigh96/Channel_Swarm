@@ -5,6 +5,7 @@ import {
   PublicKey,
   Transaction,
   TransactionInstruction,
+  SystemProgram,
 } from "@solana/web3.js";
 import {
   createAssociatedTokenAccountIdempotentInstruction,
@@ -140,6 +141,11 @@ export async function createPyusdPayment(rawInput: unknown) {
   const connection = getMainnetConnection();
   if (await connection.getGenesisHash() !== SOLANA_MAINNET_GENESIS_HASH) {
     throw new PyusdConfigurationError("PYUSD endpoint must use Solana Mainnet");
+  }
+
+  const recipientInfo = await connection.getAccountInfo(recipient, "confirmed");
+  if (recipientInfo && (recipientInfo.executable || !recipientInfo.owner.equals(SystemProgram.programId))) {
+    throw new Error("treasury_must_be_a_wallet_address_not_a_program_or_token_account");
   }
 
   const mintInfo = await getMint(
