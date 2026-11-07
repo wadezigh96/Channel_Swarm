@@ -93,6 +93,11 @@ export function buildPyusdTransferTransaction(args: {
       PYUSD_MAINNET_MINT,
       TOKEN_2022_PROGRAM_ID,
     ),
+    new TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: [],
+      data: Buffer.from(`channelswarm:pyusd:${args.requestId}`, "utf8"),
+    }),
     createTransferCheckedInstruction(
       sourceAta,
       PYUSD_MAINNET_MINT,
@@ -103,11 +108,6 @@ export function buildPyusdTransferTransaction(args: {
       [],
       TOKEN_2022_PROGRAM_ID,
     ),
-    new TransactionInstruction({
-      programId: MEMO_PROGRAM_ID,
-      keys: [],
-      data: Buffer.from(`channelswarm:pyusd:${args.requestId}`, "utf8"),
-    }),
   );
   return transaction;
 }
@@ -154,6 +154,7 @@ export async function createPyusdPayment(rawInput: unknown) {
     connection, sourceAta, "confirmed", TOKEN_2022_PROGRAM_ID,
   );
   if (!sourceAccount.owner.equals(payer) || !sourceAccount.mint.equals(PYUSD_MAINNET_MINT)) throw new Error("payer_token_account_owner_or_mint_mismatch");
+  if (sourceAccount.isFrozen) throw new Error("payer_pyusd_account_frozen");
   if (sourceAccount.amount < amountAtomic) throw new Error("insufficient_pyusd_balance");
 
   const latest = await connection.getLatestBlockhash("confirmed");
@@ -212,7 +213,7 @@ export function verifyPyusdParsedTransaction(
     ...(transaction.meta.innerInstructions ?? []).flatMap((group: any) => group.instructions ?? []),
   ];
   const expectedMemo = `channelswarm:pyusd:${args.requestId}`;
-  const memoFound = instructions.some((instruction: any) => {
+  const memoIndex = instructions.findIndex((instruction: any) => {
     if (!instruction.programId || !new PublicKey(instruction.programId).equals(MEMO_PROGRAM_ID)) return false;
     if (typeof instruction.parsed === "string") return instruction.parsed === expectedMemo;
     if (typeof instruction.data !== "string") return false;
@@ -222,7 +223,7 @@ export function verifyPyusdParsedTransaction(
       return false;
     }
   });
-  if (!memoFound) throw new Error("payment_reference_mismatch");
+  if (memoIndex < 0) throw new Error("payment_reference_mismatch");
 
   const transfers = instructions.filter((instruction: any) =>
     instruction.programId &&
@@ -238,7 +239,18 @@ export function verifyPyusdParsedTransaction(
       info.tokenAmount?.amount === args.amountAtomic.toString() &&
       info.tokenAmount?.decimals === PYUSD_DECIMALS;
   });
-  if (matches.length !== 1 || transfers.length !== 1) {
+  const transferIndex = instructions.findIndex((instruction: any) =>
+    instruction.programId &&
+    new PublicKey(instruction.programId).equals(TOKEN_2022_PROGRAM_ID) &&
+    instruction.parsed?.type === "transferChecked" &&
+    instruction.parsed.info?.mint === PYUSD_MAINNET_MINT.toBase58() &&
+    instruction.parsed.info?.source === sourceAta.toBase58() &&
+    instruction.parsed.info?.destination === destinationAta.toBase58() &&
+    instruction.parsed.info?.authority === args.payer.toBase58() &&
+    instruction.parsed.info?.tokenAmount?.amount === args.amountAtomic.toString() &&
+    instruction.parsed.info?.tokenAmount?.decimals === PYUSD_DECIMALS,
+  );
+  if (matches.length !== 1 || transfers.length !== 1 || memoIndex >= transferIndex) {
     throw new Error("pyusd_transfer_does_not_match_payment_request");
   }
 
