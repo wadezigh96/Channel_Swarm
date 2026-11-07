@@ -144,7 +144,7 @@ export async function createPyusdPayment(rawInput: unknown) {
   }
 
   const recipientInfo = await connection.getAccountInfo(recipient, "confirmed");
-  if (recipientInfo && (recipientInfo.executable || !recipientInfo.owner.equals(SystemProgram.programId))) {
+  if (recipientInfo && (recipientInfo.executable || recipientInfo.data.length > 0 || !recipientInfo.owner.equals(SystemProgram.programId))) {
     throw new Error("treasury_must_be_a_wallet_address_not_a_program_or_token_account");
   }
 
@@ -162,6 +162,20 @@ export async function createPyusdPayment(rawInput: unknown) {
   if (!sourceAccount.owner.equals(payer) || !sourceAccount.mint.equals(PYUSD_MAINNET_MINT)) throw new Error("payer_token_account_owner_or_mint_mismatch");
   if (sourceAccount.isFrozen) throw new Error("payer_pyusd_account_frozen");
   if (sourceAccount.amount < amountAtomic) throw new Error("insufficient_pyusd_balance");
+
+  const destinationAta = getAssociatedTokenAddressSync(
+    PYUSD_MAINNET_MINT, recipient, false, TOKEN_2022_PROGRAM_ID,
+  );
+  const destinationInfo = await connection.getAccountInfo(destinationAta, "confirmed");
+  if (destinationInfo) {
+    const destinationAccount = await getAccount(
+      connection, destinationAta, "confirmed", TOKEN_2022_PROGRAM_ID,
+    );
+    if (!destinationAccount.owner.equals(recipient) || !destinationAccount.mint.equals(PYUSD_MAINNET_MINT)) {
+      throw new Error("treasury_token_account_owner_or_mint_mismatch");
+    }
+    if (destinationAccount.isFrozen) throw new Error("treasury_pyusd_account_frozen");
+  }
 
   const latest = await connection.getLatestBlockhash("confirmed");
   const requestId = randomUUID();
