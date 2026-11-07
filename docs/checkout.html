@@ -13,9 +13,9 @@ h1{font-size:clamp(34px,7vw,58px);letter-spacing:-.05em;line-height:1.02;margin:
 label{display:block;font-size:12px;color:#c4ccc7;margin:18px 0 7px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #3b4840;background:#090d0a;color:#fff;font-size:16px}
 button{width:100%;padding:13px;border:0;border-radius:9px;background:#b7ef70;color:#11180e;font-weight:800;margin-top:14px;cursor:pointer}button.secondary{background:#d8dce0;color:#121416}
 button:disabled{opacity:.45;cursor:not-allowed}.status{min-height:44px;margin-top:14px;font-size:12px;line-height:1.6;color:#b7ef70;overflow-wrap:anywhere}.small{font-size:11px;color:#727e76;line-height:1.6;margin-top:12px}.pill{display:inline-block;border:1px solid #35463a;border-radius:99px;padding:5px 9px;color:#b7ef70;font-size:10px}
-.note{margin-top:18px;border:1px solid #4c4123;background:#1a170e;color:#d7c99a;padding:14px;border-radius:10px;font-size:12px;line-height:1.7}
+.wide{margin-top:16px}.aiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.note{margin-top:18px;border:1px solid #4c4123;background:#1a170e;color:#d7c99a;padding:14px;border-radius:10px;font-size:12px;line-height:1.7}
 footer{margin-top:34px;border-top:1px solid #282b2c;padding-top:18px;color:#727e76;font-size:11px}
-@media(max-width:700px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;gap:12px;flex-direction:column}}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.aiGrid{grid-template-columns:1fr}.top{align-items:flex-start;gap:12px;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -49,6 +49,26 @@ footer{margin-top:34px;border-top:1px solid #282b2c;padding-top:18px;color:#727e
       <div id="pyusdStatus" class="status" role="status" aria-live="polite"></div>
       <p class="small">Requires PYUSD and SOL for network fees. Mainnet transaction is irreversible. Check the recipient address in your wallet before approving.</p>
     </article>
+  </section>
+
+
+  <section class="card wide">
+    <span class="pill">VERCEL AI GATEWAY · HUMAN APPROVAL REQUIRED</span>
+    <h2>Ask the swarm to route an intent</h2>
+    <p class="muted">The AI reads your task and proposes the best available agent. It cannot move funds, sign a transaction, trade, settle a channel or capture a PayPal order.</p>
+    <div class="aiGrid">
+      <div>
+        <label for="aiIntent">Task / intent</label>
+        <input id="aiIntent" type="text" maxlength="1200" value="Summarize market data for AAPL and prepare a report">
+      </div>
+      <div>
+        <label for="aiToken">Your ChannelSwarm API token</label>
+        <input id="aiToken" type="password" autocomplete="off" placeholder="Enter your own CHANNELSWARM_API_TOKEN">
+      </div>
+    </div>
+    <button id="aiButton" class="secondary">Ask Vercel AI Gateway</button>
+    <div id="aiStatus" class="status" role="status" aria-live="polite"></div>
+    <p class="small">The token is used only for this request and is not saved by this page. Configure the AI model and Gateway credentials server-side.</p>
   </section>
 
   <div class="note"><strong>Important:</strong> PYUSD is PayPal-branded USD stablecoin issued by Paxos, not a PayPal fiat balance sitting directly on Solana. PayPal Sandbox checkout does not automatically convert or bridge funds into PYUSD. The Mainnet rail only transfers PYUSD already held by the connected wallet.</div>
@@ -152,7 +172,7 @@ $("pyusdButton").addEventListener("click", async () => {
     const bytes = Uint8Array.from(atob(payment.unsignedTransaction), (char) => char.charCodeAt(0));
     const transaction = Transaction.from(bytes);
 
-    setStatus("pyusdStatus", "Review the PYUSD transfer and network fee in your wallet, then approve it.");
+    setStatus("pyusdStatus", `Review ${payment.amount} PYUSD to ${payment.recipient} on Solana Mainnet and the SOL network fee in your wallet, then approve it.`);
     const sent = await provider.signAndSendTransaction(transaction);
     const signature = typeof sent === "string" ? sent : sent.signature;
     if (!signature) throw new Error("Wallet did not return a transaction signature.");
@@ -182,6 +202,42 @@ $("pyusdButton").addEventListener("click", async () => {
     throw new Error(`Still waiting for finality. Check the signature in Solana Explorer: ${signature}`);
   } catch (error) {
     setStatus("pyusdStatus", error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+
+$("aiButton").addEventListener("click", async () => {
+  const button = $("aiButton");
+  try {
+    button.disabled = true;
+    const token = $("aiToken").value.trim();
+    const intent = $("aiIntent").value.trim();
+    if (!token) throw new Error("Enter the API token configured by the project operator.");
+    if (intent.length < 3) throw new Error("Describe the task first.");
+    setStatus("aiStatus", "Asking Vercel AI Gateway for an agent proposal…");
+    const response = await fetch("/api/ai/decision", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        intent,
+        availableAgents: [
+          { name: "DataOracle", role: "data", reputation: 1.2 },
+          { name: "StockHunter", role: "stock", reputation: 1.1 },
+          { name: "Alpha", role: "general", reputation: 1.0 },
+        ],
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `AI request failed (${response.status})`);
+    const d = payload.decision;
+    setStatus("aiStatus", `Suggested agent: ${d.routeTo} · Action: ${d.action} · Confidence: ${Math.round(d.confidence * 100)}% · Human approval: required. ${d.rationale}`);
+  } catch (error) {
+    setStatus("aiStatus", error.message);
   } finally {
     button.disabled = false;
   }
