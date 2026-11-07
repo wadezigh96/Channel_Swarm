@@ -49,7 +49,7 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 - Added mocked tests for valid proposals, missing credentials, unavailable agent roles, and mandatory human approval.
 - Added server-side environment placeholders and README setup notes.
 - AI output is advisory only: it cannot sign, transfer, trade, settle, or capture payments.
-- Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
+- Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token. The default model is `nvidia/nemotron-3.5-lightning-free`; `AI_GATEWAY_MODEL` can override it. `CHANNELSWARM_API_TOKEN` still requires operator configuration. The free NVIDIA endpoint may log prompts/outputs for model improvement, so do not send personal or confidential data.
 - GitHub Actions CI passed on commit `c6e748ec9f1a1188dcc62c65591f3b115744d0be`: all 25 tests passed and `npm run build` passed. The run used mocked AI/PayPal responses; no external model call or PayPal Sandbox transaction was made. No Vercel deployment has been created.
 
 ## Remaining integration work
@@ -75,4 +75,4 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 
 The AI runtime decision is resolved: Vercel AI Gateway is selected. Configure a supported model ID, AI Gateway API key or Vercel OIDC, and a separate CHANNELSWARM_API_TOKEN before exercising the protected endpoint.
 
-The Vercel project environment audit (decrypt disabled) did not show `AI_GATEWAY_API_KEY`, `AI_GATEWAY_MODEL`, `CHANNELSWARM_API_TOKEN`, `PAYPAL_CLIENT_ID`, or `PAYPAL_CLIENT_SECRET`. No secret values were read. Configure these in Preview first before live endpoint testing. npm install reported 8 dependency advisories (4 moderate, 4 high); no automatic dependency upgrades were applied.
+The Vercel project environment audit (decrypt disabled) did not show `AI_GATEWAY_API_KEY`, `CHANNELSWARM_API_TOKEN`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `APP_BASE_URL`, `PYUSD_TREASURY_WALLET`, or `PYUSD_SOLANA_RPC_URL`. `AI_GATEWAY_MODEL` now has a free default and is optional. No secret values were read. Configure the required variables in Preview before end-to-end testing. npm install reported 8 dependency advisories (4 moderate, 4 high); no automatic dependency upgrades were applied.
