@@ -38,7 +38,7 @@ export async function decideAgentIntent(
 ): Promise<AgentIntentDecision> {
   const input = IntentInput.parse(rawInput);
   const apiKey = options.apiKey || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
-  const model = options.model ?? process.env.AI_GATEWAY_MODEL;
+  const model = options.model ?? process.env.AI_GATEWAY_MODEL ?? "nvidia/nemotron-3.5-lightning-free";
   if (!apiKey) throw new AiGatewayConfigurationError("AI_GATEWAY_API_KEY is not configured");
   if (!model) throw new AiGatewayConfigurationError("AI_GATEWAY_MODEL is not configured");
 
