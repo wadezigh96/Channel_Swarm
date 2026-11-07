@@ -36,7 +36,17 @@ The project must meaningfully use both PayPal Developer Platform (free sandbox) 
 Official challenge: https://paypalaihackathon.devpost.com/
 Official rules: https://paypalaihackathon.devpost.com/rules
 
-## Proposed implementation (pending runtime AI provider decision)
+## Vercel AI Gateway implementation added on feature branch
+
+- Added \`src/ai/gateway.ts\` to call the Vercel AI Gateway OpenAI-compatible endpoint and validate a constrained agent-routing proposal.
+- Added \`api/ai/decision.ts\` as a protected Vercel serverless endpoint (\`POST /api/ai/decision\`) using bearer-token authorization.
+- Added mocked tests for valid proposals, missing credentials, unavailable agent roles, and mandatory human approval.
+- Added server-side environment placeholders and README setup notes.
+- AI output is advisory only: it cannot sign, transfer, trade, settle, or capture payments.
+- Authentication supports \`AI_GATEWAY_API_KEY\` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
+- Tests/build have not yet been executed in this environment; no Vercel deployment has been created.
+
+## Proposed PayPal implementation (still pending)
 
 1. Add a server-side AI decision service that accepts a user commerce/payment intent and returns a validated, structured action proposal. It must not execute payments itself.
 2. Add PayPal Sandbox Orders API integration:
@@ -51,6 +61,6 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 
 ## Blocker / decision required
 
-The existing repository does not currently contain a runtime AI provider. The user's preference is to reuse an existing AI rather than introduce a new provider. Before implementing model calls, identify an already-authorized runtime endpoint/credential that can be used by the deployed application. Developer-side tools such as coding assistants do not automatically provide an application inference API.
+The AI runtime decision is resolved: Vercel AI Gateway is selected. Configure a supported model ID, AI Gateway API key or Vercel OIDC, and a separate CHANNELSWARM_API_TOKEN before exercising the protected endpoint.
 
 No PayPal credentials or AI secrets are present in this audit. Do not add fake credentials or claim the integration is functional until sandbox tests pass.
