@@ -1,78 +1,99 @@
 # PayPal AI Hackathon — Integration Audit
 
 Date: 2026-11-07
-Base branch: main
-Working branch: feat/paypal-ai-hackathon
+Repository: `wadezigh96/Channel_Swarm`
+Base branch: `main`
+Working branch: `feat/paypal-ai-hackathon`
 
-## Scope and safety
+## Safety boundary
 
-This branch is isolated from `main`. No merge, deployment, live payment, wallet signing, or transaction broadcast is part of this work.
+- All changes are isolated to the feature branch.
+- No merge, deployment, PayPal Live call, wallet signing, PYUSD Mainnet transfer, or Solana transaction broadcast was performed.
+- Existing live-trading and channel execution settings were not changed.
 
-## Existing application audit
+## Existing ChannelSwarm utility preserved
 
-Reviewed the repository README, package manifest, environment example, swarm orchestrator, stock agent, payment channel manager, x402-style server, reputation registry, and dashboard.
+- Solana Payment Channels and the existing USDC channel instruction builder.
+- 50-byte Ed25519 signed cumulative vouchers.
+- Multi-agent orchestration, reputation gates and x402-style payment requirements.
+- Stocknized Agent and Pyth data, paper-first execution mode.
+- Existing dashboard and simulation.
 
-Existing capabilities:
-- Solana Payment Channels client and signed cumulative Ed25519 vouchers.
-- Multi-agent orchestration with General, Data, and Stock roles.
-- Reputation-gated participation.
-- x402-style HTTP payment requirement and voucher verification.
-- Stocknized Agent with deterministic/Pyth data and paper-first execution.
-- A static HTML dashboard and simulation demo.
+PYUSD is a separate direct-payment rail. The existing channel instruction builder targets the legacy SPL Token program; the official Solana PYUSD mint uses Token-2022. This branch does not falsely claim PYUSD has been substituted into the legacy USDC channel escrow.
 
-AI runtime finding:
-- Initial audit found no AI model integration; the Vercel AI Gateway service and protected inference endpoint have since been added on this feature branch.
-- Existing deterministic stock rules and reputation logic are not an AI model integration and must not be presented as one.
-- The AI routing integration is present in source but remains unverified against a live Gateway model until credentials are configured and the endpoint is exercised.
+## Implemented on this branch
 
-PayPal runtime finding:
-- Initial audit found no PayPal integration. This feature branch now contains a Sandbox-only Orders v2 client, a buyer-facing checkout page, and same-origin create-order and buyer-approved capture endpoints.
-- The implementation validates order status, exact USD amount/currency and the unique custom_id reference before capture, and uses PayPal-Request-Id for idempotency.
-- Added PayPal webhook signature verification via PayPal's verification API. It currently acknowledges/logs verified events; durable event and fulfillment storage remains outstanding.
-- Sandbox credentials, webhook registration and end-to-end verification remain outstanding.
-- Added direct PYUSD Mainnet checkout using the official Token-2022 mint, 6-decimal TransferChecked transaction, wallet signature, unique memo, Mainnet genesis check, mint extension checks and finalized transaction verification.
-- The original USDC Payment Channels and 50-byte Ed25519 voucher flow is unchanged. PYUSD is a separate direct-payment rail because the current channel instruction builder targets the legacy SPL Token program.
-- PayPal Sandbox checkout is not a fiat-to-PYUSD bridge; PYUSD checkout transfers tokens already held by the payer wallet.
-- Solana payment channels are not a substitute for the required PayPal Developer Platform integration.
+### Vercel AI Gateway
 
-## Hackathon requirements
+- `src/ai/gateway.ts` calls the Vercel AI Gateway Chat Completions endpoint.
+- Default model: `nvidia/nemotron-3.5-lightning-free`; `AI_GATEWAY_MODEL` can override it.
+- The model proposes an available agent and payment rail: PayPal Sandbox, PYUSD Mainnet, existing channel voucher, or none.
+- Output is schema-validated; payment-rail/action combinations are checked; every response requires human approval.
+- The AI endpoint cannot sign, transfer, trade, settle, capture or broadcast.
+- `/checkout.html` contains the interactive AI routing control. The operator enters the project API token; the page does not persist it.
+- Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC.
+- Privacy warning is displayed: the free NVIDIA model may log prompts and outputs for model improvement. Do not submit personal, confidential or secret data.
 
-The project must meaningfully use both PayPal Developer Platform (free sandbox) and an AI tool/model/platform, provide a working prototype, public source repository with license, setup/run instructions, and a public YouTube demo under three minutes.
+### PayPal Developer Platform — Sandbox
 
-Official challenge: https://paypalaihackathon.devpost.com/
-Official rules: https://paypalaihackathon.devpost.com/rules
+- Buyer-facing checkout page at `docs/checkout.html`.
+- PayPal Orders v2 Sandbox create-order and capture endpoints.
+- Buyer return flow is bound to a unique request ID; capture verifies order status, exact USD amount/currency and `custom_id` before capture.
+- Uses `PayPal-Request-Id` idempotency.
+- Webhook endpoint calls PayPal's webhook-signature verification API before acknowledging/logging an event.
+- All PayPal API calls are pinned to `https://api-m.sandbox.paypal.com`; no PayPal Live path exists.
+- Webhook event persistence and downstream fulfillment are not implemented.
 
-## Vercel AI Gateway implementation added on feature branch
+### PYUSD — Solana Mainnet
 
-- Added `src/ai/gateway.ts` to call the Vercel AI Gateway OpenAI-compatible endpoint and validate a constrained agent-routing proposal.
-- Added `api/ai/decision.ts` as a protected Vercel serverless endpoint (`POST /api/ai/decision`) using bearer-token authorization.
-- Added mocked tests for valid proposals, missing credentials, unavailable agent roles, and mandatory human approval.
-- Added server-side environment placeholders and README setup notes.
-- AI output is advisory only: it cannot sign, transfer, trade, settle, or capture payments.
-- Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token. The default model is `nvidia/nemotron-3.5-lightning-free`; `AI_GATEWAY_MODEL` can override it. `CHANNELSWARM_API_TOKEN` still requires operator configuration. The free NVIDIA endpoint may log prompts/outputs for model improvement, so do not send personal or confidential data.
-- GitHub Actions CI passed on commit `c6e748ec9f1a1188dcc62c65591f3b115744d0be`: all 25 tests passed and `npm run build` passed. The run used mocked AI/PayPal responses; no external model call or PayPal Sandbox transaction was made. No Vercel deployment has been created.
+- Official Solana Mainnet mint: `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo`.
+- Token-2022 program, 6 decimals.
+- Server prepares an unsigned transaction; the payer wallet signs it.
+- Uses recipient associated Token-2022 account creation if needed, a payment memo immediately before `TransferChecked`, and a fixed treasury recipient.
+- Checks Mainnet genesis, mint decimals, transfer-fee/hook configuration, payer/treasury wallet/account type, frozen token accounts, payer balance and exact atomic amount.
+- Verifier checks finalized transaction, payer signer, PYUSD mint, source/destination token accounts, exact amount/decimals and memo reference.
+- No server private key is used for payer signing.
+- PayPal Sandbox fiat is not automatically converted into PYUSD. The PYUSD flow transfers tokens already held by the user's Solana wallet.
+- PYUSD has active issuer permanent-delegate and freeze controls; this is disclosed in the checkout UI and README.
 
-## Remaining integration work
+## Automated verification
 
-1. Configure `AI_GATEWAY_MODEL`, AI Gateway credentials/OIDC, and `CHANNELSWARM_API_TOKEN` in Vercel Preview; exercise the AI demo UI.
-2. Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, and `APP_BASE_URL`; register the Sandbox webhook URL and run a complete buyer approval/capture test.
-3. Configure `PYUSD_TREASURY_WALLET` and a reliable `PYUSD_SOLANA_RPC_URL`; verify the recipient address and test a very small Mainnet payment only after explicit operator approval.
-4. Add durable storage and idempotent fulfillment before using payment proofs to unlock valuable services.
-5. Record a public YouTube demo under three minutes, then complete the Devpost form.
+GitHub Actions passed on commit `8a6447e55adb95568add4c7b5c5d0e476f7892c1`:
+- `npm test`: 30 passed, 0 failed.
+- `npm run build`: passed, including typechecking the `api/**` Vercel functions.
 
-## Previous PayPal implementation notes
+This CI uses mocked AI and PayPal responses. It does not prove live AI Gateway credentials, PayPal Sandbox account configuration, webhook registration, wallet compatibility or a real PYUSD Mainnet payment.
 
+The CI dependency installation reported 8 advisories (4 moderate, 4 high). No automatic dependency upgrades were applied.
 
+## Vercel environment audit
 
-1. Configure Sandbox-only `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` in the Vercel project; do not use live credentials.
-2. Add and test PayPal webhook signature verification using the Webhooks API.
-3. Add a buyer-facing checkout/approval UI that calls the protected endpoints without exposing server secrets.
-4. Run the mocked test suite and TypeScript build, then perform a controlled Sandbox end-to-end test after credentials are configured.
-5. Connect the AI proposal to the checkout flow with explicit operator/buyer confirmation and audit events. The AI must never trigger capture itself.
-6. Keep Solana Payment Channels as the agent-to-agent micropayment layer; clearly distinguish simulation from on-chain settlement.
+The project environment list was inspected with decryption disabled; no secret values were read. These names were not present:
+- `CHANNELSWARM_API_TOKEN`
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_WEBHOOK_ID`
+- `PYUSD_TREASURY_WALLET`
 
-## Remaining setup and verification
+Also not present as project variables:
+- `AI_GATEWAY_API_KEY` (Vercel OIDC may be used instead, but runtime auth has not been exercised).
+- `PYUSD_SOLANA_RPC_URL` (optional; code falls back to public Mainnet RPC, which may be rate-limited).
+- `APP_BASE_URL` (optional on Vercel; current deployment URL is used).
 
-The AI runtime decision is resolved: Vercel AI Gateway is selected. Configure a supported model ID, AI Gateway API key or Vercel OIDC, and a separate CHANNELSWARM_API_TOKEN before exercising the protected endpoint.
+The model has a code default, so `AI_GATEWAY_MODEL` is optional.
 
-The Vercel project environment audit (decrypt disabled) did not show `AI_GATEWAY_API_KEY`, `CHANNELSWARM_API_TOKEN`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `APP_BASE_URL`, `PYUSD_TREASURY_WALLET`, or `PYUSD_SOLANA_RPC_URL`. `AI_GATEWAY_MODEL` now has a free default and is optional. No secret values were read. Configure the required variables in Preview before end-to-end testing. npm install reported 8 dependency advisories (4 moderate, 4 high); no automatic dependency upgrades were applied.
+## Remaining before Devpost submission
+
+1. Set `CHANNELSWARM_API_TOKEN` in Vercel Preview and confirm AI Gateway OIDC or API-key authentication.
+2. Add PayPal Sandbox client ID/secret, register the Sandbox webhook and set its webhook ID; run buyer approval/capture end-to-end.
+3. Set the public `PYUSD_TREASURY_WALLET` and reliable Mainnet RPC; independently check the recipient address. Only then, and only with explicit operator approval, run a tiny real Mainnet payment.
+4. Add durable storage and one-time idempotent fulfillment before using payment verification to unlock valuable services.
+5. Record a working demo video, upload it publicly to YouTube, and keep it under three minutes.
+6. Paste the final text, public repository/branch, setup instructions and YouTube URL into Devpost.
+
+## Official challenge
+
+- https://paypalaihackathon.devpost.com/
+- https://paypalaihackathon.devpost.com/rules
+
+The existing Vercel dashboard deployment is from the main branch and does not include these unmerged changes. The feature branch has not been deployed. The repository includes `ENV_SETUP.md`, `SUBMISSION.md` and `DEMO_SCRIPT.md` for local judge setup and submission preparation.
