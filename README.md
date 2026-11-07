@@ -25,6 +25,7 @@ It combines:
 
 - ⚡ **Payment Channels** — signed cumulative vouchers for micropayments
 - 🤖 **Agent Swarm** — payer, oracle and trading agents coordinating together
+- 🧠 **Vercel AI Gateway** — server-side intent routing that proposes an agent/action; it cannot execute payments or trades
 - 🛡️ **Reputation** — score-gated agent participation
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
@@ -88,6 +89,27 @@ flowchart TB
 | **Payment Channels** | Solana on-chain settlement primitive |
 | **x402-style HTTP** | Payment-required resource flow using signed vouchers |
 | **Stocknized Agent** | Strategy + unified execution path + proofs |
+
+## 🧠 AI intent routing (Vercel AI Gateway)
+
+The optional serverless endpoint \`POST /api/ai/decision\` uses Vercel AI Gateway to propose which available agent should handle an intent. It returns a constrained JSON proposal (\`routeTo\`, \`action\`, \`confidence\`, \`rationale\`) and always sets \`requiresHumanApproval: true\`. It does not sign transactions, open channels, execute trades, settle vouchers, or capture payments.
+
+Configure these server-side environment variables in Vercel:
+
+- \`AI_GATEWAY_MODEL\` — a model ID supported by Vercel AI Gateway.
+- \`AI_GATEWAY_API_KEY\` — AI Gateway API key, or use Vercel OIDC (\`VERCEL_OIDC_TOKEN\`) where configured.
+- \`CHANNELSWARM_API_TOKEN\` — a long random bearer token required by the endpoint.
+
+Example request (replace the token locally; never commit it):
+
+\`\`\`bash
+curl -X POST http://localhost:3000/api/ai/decision \\
+  -H "Authorization: Bearer $CHANNELSWARM_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"intent":"Summarize market data for AAPL","availableAgents":[{"name":"DataOracle","role":"data","reputation":1.2},{"name":"StockHunter","role":"stock","reputation":1.1}]}'
+\`\`\`
+
+The endpoint is intentionally protected and returns \`503\` if the AI Gateway model/auth configuration is missing.
 
 ## 💸 Payment Channel
 
