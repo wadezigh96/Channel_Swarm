@@ -35,7 +35,7 @@ test("PayPal capture refuses unless explicit user approval is true", async () =>
   await assert.rejects(capturePayPalSandboxOrder({
     orderId: "ORDER-12345", expectedAmount: "4.00", currency: "USD",
     approvedByUser: false, requestId: "capture-req-1234",
-  }), /ZodError/);
+  }), (error: unknown) => error instanceof Error && error.name === "ZodError");
 });
 
 test("PayPal capture checks order status and exact amount before capture", async () => {
@@ -58,6 +58,7 @@ test("PayPal capture proceeds only for approved exact-value sandbox order", asyn
   const mock = mockFetch([
     { access_token: "mock-access-token" },
     { id: "ORDER-12345", status: "APPROVED", purchase_units: [{ amount: { currency_code: "USD", value: "4.00" } }] },
+    { access_token: "mock-access-token-2" },
     { id: "ORDER-12345", status: "COMPLETED" },
   ]);
   const result = await capturePayPalSandboxOrder({
