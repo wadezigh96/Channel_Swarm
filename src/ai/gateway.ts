@@ -38,7 +38,7 @@ export async function decideAgentIntent(
 ): Promise<AgentIntentDecision> {
   const input = IntentInput.parse(rawInput);
   const apiKey = options.apiKey || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
-  const model = options.model ?? process.env.AI_GATEWAY_MODEL ?? "nvidia/nemotron-3.5-lightning-free";
+  const model = options.model ?? process.env.AI_GATEWAY_MODEL ?? "nvidia/nemotron-3-nano-30b-a3b";
   if (!apiKey) throw new AiGatewayConfigurationError("AI_GATEWAY_API_KEY is not configured");
   if (!model) throw new AiGatewayConfigurationError("AI_GATEWAY_MODEL is not configured");
 
@@ -61,7 +61,7 @@ export async function decideAgentIntent(
             "You are the intent-routing assistant for ChannelSwarm.",
             "Return only a JSON object with routeTo, action, paymentRail, confidence, rationale, requiresHumanApproval.",
             "routeTo must be one of data, compute, stock, general.",
-            "action must be one of analyze_data, coordinate_task, hold.",
+            "action must be one of analyze_data, coordinate_task, prepare_payment, hold.",
             "Choose only a role present in availableAgents; if no role fits, choose the closest available role.",
             "For an explicit PayPal fiat checkout intent choose paymentRail paypal_sandbox and action prepare_payment.",
             "For an explicit PYUSD-on-Solana intent choose paymentRail pyusd_mainnet and action prepare_payment.",
