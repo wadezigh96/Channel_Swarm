@@ -47,7 +47,7 @@ footer{margin-top:34px;border-top:1px solid #282b2c;padding-top:18px;color:#727e
       <input id="pyusdAmount" type="number" min="0.01" max="10000" step="0.01" value="1.00">
       <button id="pyusdButton">Connect wallet & pay PYUSD</button>
       <div id="pyusdStatus" class="status" role="status" aria-live="polite"></div>
-      <p class="small">Requires PYUSD and SOL for network fees. Mainnet transaction is irreversible. Check the recipient address in your wallet before approving.</p>
+      <p class="small">Requires PYUSD and SOL for network fees and, if the recipient token account is new, account rent. Mainnet transaction is irreversible. Check the recipient address in your wallet before approving.</p>
     </article>
   </section>
 
@@ -172,7 +172,7 @@ $("pyusdButton").addEventListener("click", async () => {
     const bytes = Uint8Array.from(atob(payment.unsignedTransaction), (char) => char.charCodeAt(0));
     const transaction = Transaction.from(bytes);
 
-    setStatus("pyusdStatus", `Review ${payment.amount} PYUSD to ${payment.recipient} on Solana Mainnet and the SOL network fee in your wallet, then approve it.`);
+    setStatus("pyusdStatus", `Review ${payment.amount} PYUSD to ${payment.recipient} on Solana Mainnet and SOL network fee/possible account rent in your wallet, then approve it.`);
     const sent = await provider.signAndSendTransaction(transaction);
     const signature = typeof sent === "string" ? sent : sent.signature;
     if (!signature) throw new Error("Wallet did not return a transaction signature.");
