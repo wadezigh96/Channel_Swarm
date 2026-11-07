@@ -235,7 +235,12 @@ $("aiButton").addEventListener("click", async () => {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `AI request failed (${response.status})`);
     const d = payload.decision;
-    setStatus("aiStatus", `Suggested agent: ${d.routeTo} · Action: ${d.action} · Confidence: ${Math.round(d.confidence * 100)}% · Payment rail: ${d.paymentRail} · Human approval: required. ${d.rationale}`);
+    $("paypalButton").textContent = "Continue with PayPal Sandbox";
+    $("pyusdButton").textContent = "Connect wallet & pay PYUSD";
+    if (d.paymentRail === "paypal_sandbox") $("paypalButton").textContent = "Recommended: PayPal Sandbox";
+    if (d.paymentRail === "pyusd_mainnet") $("pyusdButton").textContent = "Recommended: PYUSD Mainnet";
+    const railHint = d.paymentRail === "channel_voucher" ? " Use the existing USDC channel-voucher demo for this rail." : "";
+    setStatus("aiStatus", `Suggested agent: ${d.routeTo} · Action: ${d.action} · Confidence: ${Math.round(d.confidence * 100)}% · Payment rail: ${d.paymentRail} · Human approval: required. ${d.rationale}${railHint}`);
   } catch (error) {
     setStatus("aiStatus", error.message);
   } finally {
