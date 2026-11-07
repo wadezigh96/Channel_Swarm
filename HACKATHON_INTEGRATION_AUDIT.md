@@ -26,9 +26,13 @@ AI runtime finding:
 - The AI routing integration is present in source but remains unverified against a live Gateway model until credentials are configured and the endpoint is exercised.
 
 PayPal runtime finding:
-- Initial audit found no PayPal integration. This feature branch now contains a Sandbox-only Orders v2 client plus protected create-order and approval-gated capture endpoints.
-- The implementation validates order status and exact USD amount/currency before capture, and uses PayPal-Request-Id for idempotency.
-- Webhook signature verification and a buyer-facing checkout UI are not implemented yet. Sandbox credentials and end-to-end verification remain outstanding.
+- Initial audit found no PayPal integration. This feature branch now contains a Sandbox-only Orders v2 client, a buyer-facing checkout page, and same-origin create-order and buyer-approved capture endpoints.
+- The implementation validates order status, exact USD amount/currency and the unique custom_id reference before capture, and uses PayPal-Request-Id for idempotency.
+- Added PayPal webhook signature verification via PayPal's verification API. It currently acknowledges/logs verified events; durable event and fulfillment storage remains outstanding.
+- Sandbox credentials, webhook registration and end-to-end verification remain outstanding.
+- Added direct PYUSD Mainnet checkout using the official Token-2022 mint, 6-decimal TransferChecked transaction, wallet signature, unique memo, Mainnet genesis check, mint extension checks and finalized transaction verification.
+- The original USDC Payment Channels and 50-byte Ed25519 voucher flow is unchanged. PYUSD is a separate direct-payment rail because the current channel instruction builder targets the legacy SPL Token program.
+- PayPal Sandbox checkout is not a fiat-to-PYUSD bridge; PYUSD checkout transfers tokens already held by the payer wallet.
 - Solana payment channels are not a substitute for the required PayPal Developer Platform integration.
 
 ## Hackathon requirements
@@ -48,7 +52,17 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 - Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
 - GitHub Actions CI passed on commit `c6e748ec9f1a1188dcc62c65591f3b115744d0be`: all 25 tests passed and `npm run build` passed. The run used mocked AI/PayPal responses; no external model call or PayPal Sandbox transaction was made. No Vercel deployment has been created.
 
-## Remaining PayPal work
+## Remaining integration work
+
+1. Configure `AI_GATEWAY_MODEL`, AI Gateway credentials/OIDC, and `CHANNELSWARM_API_TOKEN` in Vercel Preview; exercise the AI demo UI.
+2. Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, and `APP_BASE_URL`; register the Sandbox webhook URL and run a complete buyer approval/capture test.
+3. Configure `PYUSD_TREASURY_WALLET` and a reliable `PYUSD_SOLANA_RPC_URL`; verify the recipient address and test a very small Mainnet payment only after explicit operator approval.
+4. Add durable storage and idempotent fulfillment before using payment proofs to unlock valuable services.
+5. Record a public YouTube demo under three minutes, then complete the Devpost form.
+
+## Previous PayPal implementation notes
+
+
 
 1. Configure Sandbox-only `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` in the Vercel project; do not use live credentials.
 2. Add and test PayPal webhook signature verification using the Webhooks API.
