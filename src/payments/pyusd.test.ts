@@ -5,7 +5,6 @@ import {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
-import bs58 from "bs58";
 import {
   MEMO_PROGRAM_ID,
   PYUSD_MAINNET_MINT,
@@ -19,7 +18,7 @@ test("PYUSD uses exact USD decimal conversion with six token decimals", () => {
   assert.equal(parsePyusdAmount("0.01"), 10_000n);
   assert.equal(parsePyusdAmount("123.45"), 123_450_000n);
   assert.throws(() => parsePyusdAmount("0.001"), /amount_must/);
-  assert.throws(() => parsePyusdAmount("100001.00"), /amount_out_of_range/);
+  assert.throws(() => parsePyusdAmount("10001.00"), /amount_out_of_range/);
 });
 
 test("PYUSD payment transaction uses Token-2022 and fixed Mainnet mint", () => {
@@ -64,7 +63,7 @@ test("PYUSD verifier accepts only the exact payer, recipient, mint, amount and m
           },
           {
             programId: MEMO_PROGRAM_ID,
-            data: bs58.encode(Buffer.from(`channelswarm:pyusd:${requestId}`)),
+            parsed: `channelswarm:pyusd:${requestId}`,
           },
         ],
       },
