@@ -26,7 +26,9 @@ AI runtime finding:
 - The AI routing integration is present in source but remains unverified against a live Gateway model until credentials are configured and the endpoint is exercised.
 
 PayPal runtime finding:
-- No PayPal SDK, Orders API client, checkout route, webhook verification, or PayPal environment variables were found in the reviewed files.
+- Initial audit found no PayPal integration. This feature branch now contains a Sandbox-only Orders v2 client plus protected create-order and approval-gated capture endpoints.
+- The implementation validates order status and exact USD amount/currency before capture, and uses PayPal-Request-Id for idempotency.
+- Webhook signature verification and a buyer-facing checkout UI are not implemented yet. Sandbox credentials and end-to-end verification remain outstanding.
 - Solana payment channels are not a substitute for the required PayPal Developer Platform integration.
 
 ## Hackathon requirements
@@ -46,18 +48,14 @@ Official rules: https://paypalaihackathon.devpost.com/rules
 - Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC token; model ID and endpoint bearer token still require configuration.
 - Tests/build have not yet been executed in this environment; no Vercel deployment has been created.
 
-## Proposed PayPal implementation (still pending)
+## Remaining PayPal work
 
-1. Add a server-side AI decision service that accepts a user commerce/payment intent and returns a validated, structured action proposal. It must not execute payments itself.
-2. Add PayPal Sandbox Orders API integration:
-   - server-side access-token acquisition;
-   - create order;
-   - capture only after explicit user approval;
-   - verify webhook signatures for asynchronous events;
-   - idempotency and amount/currency validation.
-3. Connect the AI proposal to the PayPal order flow with explicit confirmation, audit events, and a deterministic fallback when the model is unavailable.
-4. Keep Solana Payment Channels as the agent-to-agent micropayment layer; clearly distinguish simulation from on-chain settlement.
-5. Add tests using mocked model and PayPal sandbox responses. Never put credentials in source control.
+1. Configure Sandbox-only `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` in the Vercel project; do not use live credentials.
+2. Add and test PayPal webhook signature verification using the Webhooks API.
+3. Add a buyer-facing checkout/approval UI that calls the protected endpoints without exposing server secrets.
+4. Run the mocked test suite and TypeScript build, then perform a controlled Sandbox end-to-end test after credentials are configured.
+5. Connect the AI proposal to the checkout flow with explicit operator/buyer confirmation and audit events. The AI must never trigger capture itself.
+6. Keep Solana Payment Channels as the agent-to-agent micropayment layer; clearly distinguish simulation from on-chain settlement.
 
 ## Remaining setup and verification
 
