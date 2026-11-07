@@ -76,6 +76,7 @@ This existing ChannelSwarm project was substantially updated with:
 - **Existing dashboard (main-branch deployment; not updated with this feature branch):** https://swarm-agent-beta.vercel.app/
 - **Checkout source:** https://github.com/wadezigh96/Channel_Swarm/blob/feat/paypal-ai-hackathon/docs/checkout.html
 - **Demo storyboard:** https://github.com/wadezigh96/Channel_Swarm/blob/feat/paypal-ai-hackathon/DEMO_SCRIPT.md
+- **Environment setup:** https://github.com/wadezigh96/Channel_Swarm/blob/feat/paypal-ai-hackathon/ENV_SETUP.md
 - **PYUSD Mainnet mint:** https://explorer.solana.com/address/2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo
 - **Payment Channels program:** https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
 - **Demo video (public YouTube, under 3 minutes):** ADD_PUBLIC_YOUTUBE_URL
