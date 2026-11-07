@@ -134,7 +134,8 @@ function assertSupportedMint(mintInfo: Awaited<ReturnType<typeof getMint>>) {
 export async function createPyusdPayment(rawInput: unknown) {
   const input = PaymentInput.parse(rawInput);
   const amountAtomic = parsePyusdAmount(input.amount);
-  const payer = new PublicKey(input.payer);
+  let payer: PublicKey;
+  try { payer = new PublicKey(input.payer); } catch { throw new Error("invalid_payer_public_key"); }
   const recipient = getTreasuryWallet();
   if (payer.equals(recipient)) throw new Error("payer_and_recipient_must_differ");
 
@@ -156,6 +157,8 @@ export async function createPyusdPayment(rawInput: unknown) {
   const sourceAta = getAssociatedTokenAddressSync(
     PYUSD_MAINNET_MINT, payer, false, TOKEN_2022_PROGRAM_ID,
   );
+  const sourceInfo = await connection.getAccountInfo(sourceAta, "confirmed");
+  if (!sourceInfo) throw new Error("payer_pyusd_account_not_found");
   const sourceAccount = await getAccount(
     connection, sourceAta, "confirmed", TOKEN_2022_PROGRAM_ID,
   );
@@ -289,7 +292,8 @@ export function verifyPyusdParsedTransaction(
 export async function verifyPyusdPayment(rawInput: unknown) {
   const input = VerifyInput.parse(rawInput);
   const amountAtomic = parsePyusdAmount(input.amount);
-  const payer = new PublicKey(input.payer);
+  let payer: PublicKey;
+  try { payer = new PublicKey(input.payer); } catch { throw new Error("invalid_payer_public_key"); }
   const recipient = getTreasuryWallet();
   const signatureBytes = bs58.decode(input.signature);
   if (signatureBytes.length !== 64) throw new Error("invalid_transaction_signature");
