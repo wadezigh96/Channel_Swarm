@@ -8,7 +8,7 @@
 
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://solana.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=feat%2Fpaypal-ai-hackathon&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
 
 [**Existing Dashboard (main deployment)**](https://swarm-agent-beta.vercel.app/) · [**Checkout source**](docs/checkout.html) · [**Environment Setup**](ENV_SETUP.md) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
@@ -222,7 +222,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/wadezigh96/Channel_Swarm.git
+git clone --branch feat/paypal-ai-hackathon --single-branch https://github.com/wadezigh96/Channel_Swarm.git
 cd Channel_Swarm
 npm install
 
