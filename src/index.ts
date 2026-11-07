@@ -18,3 +18,5 @@ export { decideAgentIntent, AiGatewayConfigurationError } from "./ai/gateway.js"
 export type { AgentIntentInput, AgentIntentDecision } from "./ai/gateway.js";
 
 export { createPayPalSandboxOrder, capturePayPalSandboxOrder, PayPalConfigurationError } from "./payments/paypal-sandbox.js";
+
+export { PYUSD_MAINNET_MINT, createPyusdPayment, verifyPyusdPayment, parsePyusdAmount } from "./payments/pyusd.js";
