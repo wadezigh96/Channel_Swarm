@@ -68,23 +68,26 @@ The CI dependency installation reported 8 advisories (4 moderate, 4 high). No au
 
 ## Vercel environment audit
 
-The project environment list was inspected with decryption disabled; no secret values were read. These names were not present:
-- `CHANNELSWARM_API_TOKEN`
+The project environment list was inspected with decryption disabled; no secret values were read.
+
+Confirmed in Vercel Preview:
+- `CHANNELSWARM_API_TOKEN` exists for Preview with no Git-branch restriction.
+- `AI_GATEWAY_MODEL` is set to `nvidia/nemotron-3-nano-30b-a3b` and scoped to `feat/paypal-ai-hackathon`.
+
+Not present in the inspected project environment list:
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_WEBHOOK_ID`
 - `PYUSD_TREASURY_WALLET`
-
-Also not present as project variables:
 - `AI_GATEWAY_API_KEY` (Vercel OIDC may be used instead, but runtime auth has not been exercised).
-- `PYUSD_SOLANA_RPC_URL` (optional; code falls back to public Mainnet RPC, which may be rate-limited).
-- `APP_BASE_URL` (optional on Vercel; current deployment URL is used).
 
-`AI_GATEWAY_MODEL` is configured in Vercel Preview for `feat/paypal-ai-hackathon` as `nvidia/nemotron-3-nano-30b-a3b`; the code has the same fallback. Vercel OIDC token availability has not yet been confirmed in a deployed runtime.
+`PYUSD_SOLANA_RPC_URL` is optional; code falls back to public Mainnet RPC, which may be rate-limited. `APP_BASE_URL` is optional on Vercel; the current deployment URL is used. No secret values were decrypted or displayed.
+
+The token and model configuration are present in Preview, but the feature branch has not been deployed, so successful runtime authentication and a live AI inference call remain unverified.
 
 ## Remaining before Devpost submission
 
-1. Set `CHANNELSWARM_API_TOKEN` in Vercel Preview and confirm AI Gateway OIDC or API-key authentication. The model name is already configured for this branch; no live inference call has been made.
+1. Deploy a Preview for `feat/paypal-ai-hackathon` only when explicitly authorized, then verify AI Gateway authentication and a live inference call. The token and model environment variables are already configured for Preview.
 2. Add PayPal Sandbox client ID/secret, register the Sandbox webhook and set its webhook ID; run buyer approval/capture end-to-end.
 3. Set the public `PYUSD_TREASURY_WALLET` and reliable Mainnet RPC; independently check the recipient address. Only then, and only with explicit operator approval, run a tiny real Mainnet payment.
 4. Add durable storage and one-time idempotent fulfillment before using payment verification to unlock valuable services.
