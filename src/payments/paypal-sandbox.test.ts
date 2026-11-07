@@ -67,5 +67,5 @@ test("PayPal capture proceeds only for approved exact-value sandbox order", asyn
   }, { fetchImpl: mock.fetchImpl });
   assert.equal(result.status, "COMPLETED");
   assert.equal(result.humanApproved, true);
-  assert.equal(mock.calls[2].url, "https://api-m.sandbox.paypal.com/v2/checkout/orders/ORDER-12345/capture");
+  assert.equal(mock.calls[3].url, "https://api-m.sandbox.paypal.com/v2/checkout/orders/ORDER-12345/capture");
 });
