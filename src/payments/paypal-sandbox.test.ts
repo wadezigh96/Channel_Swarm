@@ -28,7 +28,7 @@ test("PayPal order creation uses sandbox OAuth and idempotency", async () => {
   assert.equal(result.id, "ORDER-12345");
   const orderBody = JSON.parse(String(mock.calls[1].init?.body));
   assert.equal(orderBody.purchase_units[0].custom_id, "create-req-1234");
-  assert.equal(orderBody.application_context.return_url, "https://channelswarm.example/checkout.html?paypal=return");
+  assert.equal(orderBody.payment_source.paypal.experience_context.return_url, "https://channelswarm.example/checkout.html?paypal=return");
   assert.match(result.approvalUrl ?? "", /sandbox.paypal.com/);
   assert.equal(mock.calls[0].url, "https://api-m.sandbox.paypal.com/v1/oauth2/token");
   assert.equal(mock.calls[1].url, "https://api-m.sandbox.paypal.com/v2/checkout/orders");
