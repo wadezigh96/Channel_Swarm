@@ -4,9 +4,9 @@ This guide configures the feature branch without exposing secrets in GitHub or c
 
 ## 1. Vercel AI Gateway
 
-The default model is `nvidia/nemotron-3.5-lightning-free`. It is currently listed as free on Vercel AI Gateway and supports structured outputs. The free NVIDIA endpoint may log prompts and outputs for model improvement. Use only non-sensitive demo text.
+The default model is `nvidia/nemotron-3-nano-30b-a3b`. It is listed in Vercel AI Gateway's live language-model catalog and supports structured outputs. Review the selected provider's data-retention terms before sending sensitive data; this demo should use non-sensitive task text.
 
-- `AI_GATEWAY_MODEL`: optional override; default is `nvidia/nemotron-3.5-lightning-free`.
+- `AI_GATEWAY_MODEL`: optional override; default is `nvidia/nemotron-3-nano-30b-a3b`.
 - `AI_GATEWAY_API_KEY`: optional if Vercel OIDC is available in the function runtime.
 - `CHANNELSWARM_API_TOKEN`: required. Generate a random token locally, for example in Termux:
 
