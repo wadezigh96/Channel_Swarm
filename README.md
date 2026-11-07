@@ -11,7 +11,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
 
-[**Live Dashboard**](https://swarm-agent-beta.vercel.app/) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
+[**Existing Dashboard (main deployment)**](https://swarm-agent-beta.vercel.app/) · [**Checkout source**](docs/checkout.html) · [**Payment Channels Program**](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX) · [**Submission**](SUBMISSION.md)
 
 </div>
 
@@ -226,6 +226,7 @@ cd Channel_Swarm
 npm install
 
 npm test
+npm run build
 npm run demo
 npm run demo:equity
 ```
@@ -237,7 +238,7 @@ For an on-chain payment-channel attempt:
 ONCHAIN=true npm run demo
 ```
 
-Without a funded wallet, the demo safely remains in simulation mode.
+Without a funded wallet, the demo safely remains in simulation mode. For the full PayPal/AI/PYUSD checkout prototype, configure the variables listed in `.env.example`, then run `vercel dev` and open `/checkout.html`. `npm run dashboard` serves only the static dashboard and does not run the serverless API routes.
 
 ---
 
