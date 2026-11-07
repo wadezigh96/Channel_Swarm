@@ -73,7 +73,7 @@ async function jsonPost(path, body) {
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || \`Request failed (\${response.status})\`);
+  if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
   return payload;
 }
 
@@ -123,7 +123,7 @@ async function finishPayPalReturn() {
       approvedByUser: true, requestId: pending.requestId,
     });
     sessionStorage.removeItem("channelswarm-paypal-pending");
-    setStatus("paypalStatus", \`Sandbox capture \${result.capture.status}. Order: \${result.capture.id}\`);
+    setStatus("paypalStatus", `Sandbox capture ${result.capture.status}. Order: ${result.capture.id}`);
     history.replaceState({}, "", "/checkout.html");
   } catch (error) {
     setStatus("paypalStatus", error.message);
@@ -164,7 +164,7 @@ $("pyusdButton").addEventListener("click", async () => {
         const verified = await jsonPost("/api/pyusd/verify-payment", {
           payer, amount, signature, requestId: payment.requestId,
         });
-        setStatus("pyusdStatus", \`Verified \${verified.payment.amount} PYUSD on Solana Mainnet. \${verified.payment.signature}\`);
+        setStatus("pyusdStatus", `Verified ${verified.payment.amount} PYUSD on Solana Mainnet. ${verified.payment.signature}`);
         const link = document.createElement("a");
         link.className = "link";
         link.href = verified.payment.explorerUrl;
@@ -179,7 +179,7 @@ $("pyusdButton").addEventListener("click", async () => {
         await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
-    throw new Error(\`Still waiting for finality. Check the signature in Solana Explorer: \${signature}\`);
+    throw new Error(`Still waiting for finality. Check the signature in Solana Explorer: ${signature}`);
   } catch (error) {
     setStatus("pyusdStatus", error.message);
   } finally {
