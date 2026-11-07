@@ -64,7 +64,7 @@ test("PYUSD verifier accepts only the exact payer, recipient, mint, amount and m
           },
           {
             programId: MEMO_PROGRAM_ID,
-            data: bs58.encode(Buffer.from(\`channelswarm:pyusd:\${requestId}\`)),
+            data: bs58.encode(Buffer.from(`channelswarm:pyusd:${requestId}`)),
           },
         ],
       },
