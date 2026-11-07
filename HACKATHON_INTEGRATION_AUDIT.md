@@ -32,6 +32,7 @@ PYUSD is a separate direct-payment rail. The existing channel instruction builde
 - The AI endpoint cannot sign, transfer, trade, settle, capture or broadcast.
 - `/checkout.html` contains the interactive AI routing control. The operator enters the project API token; the page does not persist it.
 - Authentication supports `AI_GATEWAY_API_KEY` or Vercel OIDC.
+- Runtime fix: the API handler reads Vercel Function's per-request `x-vercel-oidc-token` header and passes it to the gateway, with the API key/environment token as fallbacks. This fixes the prior assumption that the function request OIDC token would always be exposed through `process.env.VERCEL_OIDC_TOKEN`.
 - Privacy guidance is displayed: provider data-retention terms can vary; use non-sensitive demo text and never submit personal, confidential or secret data.
 
 ### PayPal Developer Platform — Sandbox
@@ -83,7 +84,7 @@ Not present in the inspected project environment list:
 
 `PYUSD_SOLANA_RPC_URL` is optional; code falls back to public Mainnet RPC, which may be rate-limited. `APP_BASE_URL` is optional on Vercel; the current deployment URL is used. No secret values were decrypted or displayed.
 
-The token and model configuration are present in Preview, but the feature branch has not been deployed, so successful runtime authentication and a live AI inference call remain unverified.
+The token and model configuration are present in Preview. The API route now consumes the documented Vercel Function OIDC request header. The feature branch still has no Preview deployment, so runtime authentication and a live AI inference call remain unverified.
 
 ## Remaining before Devpost submission
 
