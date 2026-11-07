@@ -45,7 +45,7 @@ PayPal Sandbox is the PayPal Developer Platform integration used to satisfy the 
 ## Tools and platforms used
 
 - **PayPal Developer Platform:** Orders v2 Sandbox create/approve/capture flow and webhook signature verification.
-- **Vercel AI Gateway:** agent and payment-rail intent routing with validated structured output and mandatory human approval.
+- **Vercel AI Gateway + NVIDIA Nemotron 3.5 Lightning Free:** agent and payment-rail intent routing with validated structured output and mandatory human approval. The free endpoint may log prompts for model improvement, so the demo uses non-sensitive task text only.
 - **Solana Mainnet:** PYUSD Token-2022 wallet payments and transaction verification.
 - **Solana Payment Channels:** existing USDC cumulative voucher flow and x402-style agent micropayments.
 
