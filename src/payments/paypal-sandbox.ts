@@ -133,6 +133,7 @@ export async function capturePayPalSandboxOrder(
   if (
     current.purchase_units.length !== 1 ||
     current.purchase_units[0].custom_id !== input.requestId ||
+    current.purchase_units[0].invoice_id !== input.requestId ||
     current.purchase_units[0].amount.currency_code !== input.currency ||
     current.purchase_units[0].amount.value !== input.expectedAmount
   ) {
