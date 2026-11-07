@@ -71,7 +71,7 @@ export async function createPayPalSandboxOrder(
   options: { fetchImpl?: Fetcher } = {},
 ) {
   const input = CreateOrderInput.parse(rawInput);
-  if (Number(input.amount) <= 0) throw new Error("amount must be greater than zero");
+  if (Number(input.amount) < 1 || Number(input.amount) > 10_000) throw new Error("PayPal Sandbox amount must be between 1.00 and 10000.00 USD");
   const fetchImpl = options.fetchImpl ?? fetch;
   const appBaseUrl = getAppBaseUrl();
   const order = await paypalRequest("/v2/checkout/orders", {
@@ -106,7 +106,7 @@ export async function capturePayPalSandboxOrder(
   options: { fetchImpl?: Fetcher } = {},
 ) {
   const input = CaptureOrderInput.parse(rawInput);
-  if (Number(input.expectedAmount) <= 0) throw new Error("expectedAmount must be greater than zero");
+  if (Number(input.expectedAmount) < 1 || Number(input.expectedAmount) > 10_000) throw new Error("PayPal Sandbox amount must be between 1.00 and 10000.00 USD");
   const fetchImpl = options.fetchImpl ?? fetch;
 
   const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(input.orderId)}`, {
