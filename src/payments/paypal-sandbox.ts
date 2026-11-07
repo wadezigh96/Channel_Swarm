@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getAppBaseUrl } from "../security/origin.js";
 
 const CreateOrderInput = z.object({
   amount: z.string().regex(/^(?:0|[1-9]\d{0,5})\.\d{2}$/),
@@ -72,6 +73,7 @@ export async function createPayPalSandboxOrder(
   const input = CreateOrderInput.parse(rawInput);
   if (Number(input.amount) <= 0) throw new Error("amount must be greater than zero");
   const fetchImpl = options.fetchImpl ?? fetch;
+  const appBaseUrl = getAppBaseUrl();
   const order = await paypalRequest("/v2/checkout/orders", {
     method: "POST",
     headers: { "PayPal-Request-Id": input.requestId },
@@ -79,8 +81,15 @@ export async function createPayPalSandboxOrder(
       intent: "CAPTURE",
       purchase_units: [{
         description: input.description,
+        custom_id: input.requestId,
+        invoice_id: input.requestId,
         amount: { currency_code: input.currency, value: input.amount },
       }],
+      application_context: {
+        return_url: `${appBaseUrl}/checkout.html?paypal=return`,
+        cancel_url: `${appBaseUrl}/checkout.html?paypal=cancel`,
+        user_action: "PAY_NOW",
+      },
     }),
   }, fetchImpl);
   const parsed = z.object({
@@ -107,6 +116,8 @@ export async function capturePayPalSandboxOrder(
     id: z.string(),
     status: z.string(),
     purchase_units: z.array(z.object({
+      custom_id: z.string(),
+      invoice_id: z.string().optional(),
       amount: z.object({ currency_code: z.string(), value: z.string() }),
     })).min(1),
   }).passthrough().parse(order);
@@ -116,6 +127,7 @@ export async function capturePayPalSandboxOrder(
   }
   if (
     current.purchase_units.length !== 1 ||
+    current.purchase_units[0].custom_id !== input.requestId ||
     current.purchase_units[0].amount.currency_code !== input.currency ||
     current.purchase_units[0].amount.value !== input.expectedAmount
   ) {
@@ -136,4 +148,39 @@ export async function capturePayPalSandboxOrder(
     throw new Error(`PayPal capture not completed (status ${result.status})`);
   }
   return { id: result.id, status: result.status, environment: "sandbox" as const, humanApproved: true };
+}
+
+
+export async function verifyPayPalWebhookSignature(
+  headers: {
+    authAlgo: string;
+    certUrl: string;
+    transmissionId: string;
+    transmissionSignature: string;
+    transmissionTime: string;
+  },
+  event: unknown,
+  options: { fetchImpl?: Fetcher } = {},
+): Promise<boolean> {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) {
+    throw new PayPalConfigurationError("PAYPAL_WEBHOOK_ID is not configured");
+  }
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const result = await paypalRequest("/v1/notifications/verify-webhook-signature", {
+    method: "POST",
+    body: JSON.stringify({
+      auth_algo: headers.authAlgo,
+      cert_url: headers.certUrl,
+      transmission_id: headers.transmissionId,
+      transmission_sig: headers.transmissionSignature,
+      transmission_time: headers.transmissionTime,
+      webhook_id: webhookId,
+      webhook_event: event,
+    }),
+  }, fetchImpl);
+  const parsed = z.object({
+    verification_status: z.enum(["SUCCESS", "FAILURE"]),
+  }).passthrough().parse(result);
+  return parsed.verification_status === "SUCCESS";
 }
