@@ -27,7 +27,7 @@ ChannelSwarm combines an AI-assisted agent coordinator with auditable payment fl
 PayPal Sandbox is the PayPal Developer Platform integration used to satisfy the hackathon's PayPal requirement. It is not a fiat-to-PYUSD bridge. PYUSD checkout is a separate Mainnet flow that transfers PYUSD already held in a user's wallet. The original Payment Channels client remains USDC-based; it is not falsely represented as a PYUSD channel because its current instruction client uses the legacy SPL Token program while PYUSD is a Token-2022 mint.
 
 ### Technical implementation
-- Vercel AI Gateway: constrained agent-routing proposals with mandatory human approval.
+- Vercel AI Gateway: constrained agent and payment-rail routing proposals with mandatory human approval.
 - PayPal Orders v2 Sandbox: OAuth, create order, buyer approval, request-bound capture, idempotency and webhook signature verification.
 - Solana Mainnet PYUSD: canonical mint `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo`, Token-2022, six decimals.
 - PYUSD verification checks finalized transaction status, payer signature, token mint, token accounts, exact atomic amount and unique memo reference.
