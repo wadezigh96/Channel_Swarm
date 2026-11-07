@@ -42,6 +42,22 @@ PayPal Sandbox is the PayPal Developer Platform integration used to satisfy the 
 - A compatible wallet must hold PYUSD and SOL for network fees. PayPal's PYUSD withdrawal availability varies by region and account eligibility.
 - No Mainnet transaction was sent by the development process.
 
+## Tools and platforms used
+
+- **PayPal Developer Platform:** Orders v2 Sandbox create/approve/capture flow and webhook signature verification.
+- **Vercel AI Gateway:** agent and payment-rail intent routing with validated structured output and mandatory human approval.
+- **Solana Mainnet:** PYUSD Token-2022 wallet payments and transaction verification.
+- **Solana Payment Channels:** existing USDC cumulative voucher flow and x402-style agent micropayments.
+
+## Significant updates during the hackathon
+
+This existing ChannelSwarm project was substantially updated with:
+- A Vercel AI Gateway decision service and interactive intent-routing UI.
+- PayPal Sandbox checkout UI, request-bound Orders API capture, and webhook verification.
+- PYUSD Mainnet Token-2022 payment preparation and finalized transaction verification.
+- A combined checkout page, updated setup documentation, automated tests and CI coverage.
+- Preserved original USDC Payment Channels, Ed25519 vouchers, reputation gates, x402-style payments and Stocknized paper mode.
+
 ## How to run locally
 1. Install Node.js 22+, npm and the Vercel CLI.
 2. Clone this repository and run `npm install`.
