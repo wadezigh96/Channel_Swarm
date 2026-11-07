@@ -250,7 +250,7 @@ export function verifyPyusdParsedTransaction(
     instruction.parsed.info?.tokenAmount?.amount === args.amountAtomic.toString() &&
     instruction.parsed.info?.tokenAmount?.decimals === PYUSD_DECIMALS,
   );
-  if (matches.length !== 1 || transfers.length !== 1 || memoIndex >= transferIndex) {
+  if (matches.length !== 1 || transfers.length !== 1 || memoIndex !== transferIndex - 1) {
     throw new Error("pyusd_transfer_does_not_match_payment_request");
   }
 
