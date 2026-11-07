@@ -59,6 +59,7 @@ PayPal Sandbox is the PayPal Developer Platform integration used to satisfy the 
 - **Feature branch:** https://github.com/wadezigh96/Channel_Swarm/tree/feat/paypal-ai-hackathon
 - **Dashboard:** https://swarm-agent-beta.vercel.app/
 - **Checkout source:** https://github.com/wadezigh96/Channel_Swarm/blob/feat/paypal-ai-hackathon/docs/checkout.html
+- **Demo storyboard:** https://github.com/wadezigh96/Channel_Swarm/blob/feat/paypal-ai-hackathon/DEMO_SCRIPT.md
 - **PYUSD Mainnet mint:** https://explorer.solana.com/address/2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo
 - **Payment Channels program:** https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
 - **Demo video (public YouTube, under 3 minutes):** ADD_PUBLIC_YOUTUBE_URL
