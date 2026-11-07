@@ -218,7 +218,7 @@ export function verifyPyusdParsedTransaction(
     if (typeof instruction.parsed === "string") return instruction.parsed === expectedMemo;
     if (typeof instruction.data !== "string") return false;
     try {
-      return bs58.decode(instruction.data).toString("utf8") === expectedMemo;
+      return Buffer.from(bs58.decode(instruction.data)).toString("utf8") === expectedMemo;
     } catch {
       return false;
     }
