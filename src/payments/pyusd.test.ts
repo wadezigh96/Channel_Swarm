@@ -30,8 +30,8 @@ test("PYUSD payment transaction uses Token-2022 and fixed Mainnet mint", () => {
     blockhash: Keypair.generate().publicKey.toBase58(),
   });
   assert.equal(tx.feePayer?.toBase58(), payer.toBase58());
-  assert.equal(tx.instructions[1].programId.toBase58(), TOKEN_2022_PROGRAM_ID.toBase58());
-  assert.equal(tx.instructions[2].programId.toBase58(), MEMO_PROGRAM_ID.toBase58());
+  assert.equal(tx.instructions[1].programId.toBase58(), MEMO_PROGRAM_ID.toBase58());
+  assert.equal(tx.instructions[2].programId.toBase58(), TOKEN_2022_PROGRAM_ID.toBase58());
   assert.equal(PYUSD_MAINNET_MINT.toBase58(), "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo");
 });
 
