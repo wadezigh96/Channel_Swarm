@@ -101,7 +101,7 @@ The serverless endpoint `POST /api/ai/decision` is demonstrated in `/checkout.ht
 
 Configure these server-side environment variables in Vercel:
 
-- `AI_GATEWAY_MODEL` — optional override; default is `nvidia/nemotron-3.5-lightning-free` (currently listed as free on Vercel AI Gateway). The free NVIDIA endpoint may log prompts/outputs for model improvement; never submit personal, confidential or secret data.
+- `AI_GATEWAY_MODEL` — optional override; default is `nvidia/nemotron-3-nano-30b-a3b` (listed in Vercel AI Gateway's live language-model catalog). The free NVIDIA endpoint may log prompts/outputs for model improvement; never submit personal, confidential or secret data.
 - `AI_GATEWAY_API_KEY` — AI Gateway API key, or use Vercel OIDC (`VERCEL_OIDC_TOKEN`) where configured.
 - `CHANNELSWARM_API_TOKEN` — a long random bearer token required by the endpoint.
 
