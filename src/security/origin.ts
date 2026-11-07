@@ -1,7 +1,7 @@
 export function getAppBaseUrl(): string {
   const configured = process.env.APP_BASE_URL;
   const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-  const value = configured || (vercelHost ? \`https://\${vercelHost}\` : "http://localhost:3000");
+  const value = configured || (vercelHost ? `https://${vercelHost}` : "http://localhost:3000");
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -19,9 +19,9 @@ export function isAllowedBrowserOrigin(origin: string | string[] | undefined): b
   try {
     const expected = new Set<string>();
     if (process.env.APP_BASE_URL) expected.add(new URL(process.env.APP_BASE_URL).origin);
-    if (process.env.VERCEL_URL) expected.add(new URL(\`https://\${process.env.VERCEL_URL}\`).origin);
+    if (process.env.VERCEL_URL) expected.add(new URL(`https://${process.env.VERCEL_URL}`).origin);
     if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-      expected.add(new URL(\`https://\${process.env.VERCEL_PROJECT_PRODUCTION_URL}\`).origin);
+      expected.add(new URL(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`).origin);
     }
     if (expected.size === 0 && process.env.NODE_ENV !== "production") {
       expected.add("http://localhost:3000");
