@@ -23,6 +23,7 @@ test("AI Gateway request returns a validated agent proposal", async () => {
         choices: [{ message: { content: JSON.stringify({
           routeTo: "data",
           action: "analyze_data",
+          paymentRail: "none",
           confidence: 0.91,
           rationale: "The intent requests a market-data summary.",
           requiresHumanApproval: true,
@@ -53,6 +54,7 @@ test("AI Gateway rejects a model proposal that selects an unavailable role", asy
         choices: [{ message: { content: JSON.stringify({
           routeTo: "compute",
           action: "coordinate_task",
+          paymentRail: "none",
           confidence: 0.8,
           rationale: "No compute agent exists.",
           requiresHumanApproval: true,
@@ -72,6 +74,7 @@ test("AI Gateway rejects any proposal that does not require human approval", asy
         choices: [{ message: { content: JSON.stringify({
           routeTo: "data",
           action: "analyze_data",
+          paymentRail: "none",
           confidence: 0.8,
           rationale: "Looks safe.",
           requiresHumanApproval: false,
@@ -79,4 +82,27 @@ test("AI Gateway rejects any proposal that does not require human approval", asy
       }), { status: 200 }),
     }),
   );
+});
+
+test("AI Gateway recommends PayPal Sandbox for a fiat checkout intent without capturing", async () => {
+  const result = await decideAgentIntent({
+    intent: "Pay 4 USD for the agent service using PayPal checkout",
+    availableAgents: [{ name: "Alpha", role: "general", reputation: 1.0 }],
+  }, {
+    apiKey: "test-key",
+    model: "test/model",
+    fetchImpl: async () => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        routeTo: "general",
+        action: "prepare_payment",
+        paymentRail: "paypal_sandbox",
+        confidence: 0.93,
+        rationale: "The user explicitly requested PayPal fiat checkout.",
+        requiresHumanApproval: true,
+      }) } }],
+    }), { status: 200 }),
+  });
+  assert.equal(result.paymentRail, "paypal_sandbox");
+  assert.equal(result.action, "prepare_payment");
+  assert.equal(result.requiresHumanApproval, true);
 });
