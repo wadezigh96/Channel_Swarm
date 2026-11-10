@@ -9,7 +9,7 @@ export default async function handler(req:any,res:any){
   if(!verified)return res.status(401).json({error:"invalid_webhook_signature"});
   const eventId=String(body.id??"");const eventType=String(body.event_type??"");const resource=body.resource??{};
   const orderId=String(resource.id??resource.supplementary_data?.related_ids?.order_id??"");
-  const status:LedgerStatus=eventType==="CHECKOUT.ORDER.APPROVED"?"APPROVED":eventType==="PAYMENT.CAPTURE.COMPLETED"?"COMPLETED":eventType==="PAYMENT.CAPTURE.PENDING"?"PENDING":eventType==="PAYMENT.CAPTURE.DENIED"?"DENIED":eventType==="CHECKOUT.PAYMENT-APPROVAL.REVERSED"?"REVERSED":"UNKNOWN";
+  const status:LedgerStatus=eventType==="CHECKOUT.ORDER.APPROVED"?"APPROVED":eventType==="PAYMENT.CAPTURE.COMPLETED"?"COMPLETED":eventType==="PAYMENT.CAPTURE.PENDING"?"PENDING":eventType==="PAYMENT.CAPTURE.DENIED"?"DENIED":(eventType==="CHECKOUT.PAYMENT-APPROVAL.REVERSED"||eventType==="PAYMENT.CAPTURE.REVERSED"||eventType==="PAYMENT.CAPTURE.REFUNDED")?"REVERSED":"UNKNOWN";
   if(!eventId||!orderId)return res.status(202).json({received:true,recorded:false,reason:"event_not_order_scoped"});
   const ledger=new PayPalLedger();const result=await ledger.recordWebhook(eventId,eventType,orderId,status);
   return res.status(200).json({received:true,duplicate:result.duplicate,status:result.record.status});
