@@ -24,14 +24,14 @@ export const PYUSD_MINT_DEVNET = new PublicKey(
 
 /**
  * Resolve PYUSD mint based on environment.
- * Set PYUSD_NETWORK=mainnet or leave empty for devnet (default).
+ * Defaults to mainnet. Set PYUSD_NETWORK=devnet to override.
  */
 export function getPyusdMint(): PublicKey {
-  const network = (process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet").toLowerCase();
-  if (network === "mainnet" || network === "mainnet-beta") {
-    return PYUSD_MINT_MAINNET;
+  const network = (process.env.PYUSD_NETWORK || process.env.NETWORK || "mainnet").toLowerCase();
+  if (network === "devnet") {
+    return PYUSD_MINT_DEVNET;
   }
-  return PYUSD_MINT_DEVNET;
+  return PYUSD_MINT_MAINNET;
 }
 
 /** Human-readable info */
