@@ -23,13 +23,14 @@ ChannelSwarm combines four capabilities:
 
 3. **Stocknized Agent** — Tokenized-equity strategy with paper default and opt-in live execution (Backpack RFQ or Jupiter xStock). Execution proofs are generated for both simulated and live fills.
 
-4. **Selectable payment rails** — A payment intent selects either Solana channel settlement or PayPal Orders v2 sandbox checkout. The orchestrator no longer creates a PayPal order after a Solana settlement. PayPal capture is only exposed after the order is verified as APPROVED. PYUSD mint addresses are recognized, but on-chain Token-2022 channel compatibility remains blocked pending independent verification.
+4. **Selectable payment rails + AI** — An AI Gateway advisor can recommend Solana channels or PayPal checkout based on the task and available rails. Its output is validated and advisory only; it cannot execute a payment. PayPal Orders v2 is backed by a verified webhook endpoint and durable KV ledger. Live capture remains separately locked and is never triggered by webhooks. PYUSD is identified but rejected for channel use when unsupported Token-2022 extensions are present.
 
 ### Why this is differentiated
 - Live Solana Payment Channels program ID + compatible 50-byte Ed25519 voucher implementation
 - Official PYUSD mint address identification; on-chain Token-2022 settlement is not enabled
-- PayPal sandbox Orders v2 create/get/capture client with approval check and webhook-signature verification helper
-- Reputation-gated multi-agent swarm with persistence
+- PayPal Orders v2 client, signature-verified webhook endpoint, durable KV ledger and independent Live capture gate (requires credentials and end-to-end validation)
+- AI Gateway payment-rail recommender with a strict human-approval boundary
+- Reputation-gated multi-agent swarm plus durable PayPal order/event ledger (Vercel KV / Upstash credentials required)
 - Stocknized layer with explicit execution modes and proofs
 
 ### How to run
@@ -56,8 +57,8 @@ npx tsx examples/paypal-swarm-demo.ts
 ### Submission notes
 - **Target track:** Best Use of Agentic Commerce / Agentic Payments
 - **Payment rails:** choose Solana Payment Channels OR PayPal Orders checkout per intent; PYUSD Token-2022 channel execution remains blocked pending compatibility verification
-- **Demo status:** simulation-first by default; PayPal sandbox order creation is available (no automatic capture); webhook receiver and durable reconciliation are not implemented; PYUSD Token-2022 on-chain channel settlement is blocked pending program compatibility verification
-- **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works. Dashboards are static snapshots. No mainnet transaction or deployment is part of this submission
+- **Demo status:** simulation-first by default; Mainnet transaction gates are independent and disabled; PayPal create/return/capture/webhook routes and durable ledger are implemented but require PayPal webhook registration and KV credentials; AI rail advice requires an AI Gateway key; PYUSD with unsupported Token-2022 extensions is rejected; dashboard health checks are not payment telemetry
+- **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works. Dashboard metrics remain static demo snapshots with separate RPC/configuration health checks. No Mainnet transaction, real PayPal capture or Production deployment is part of this preparation
 
 ### Team
 Solo

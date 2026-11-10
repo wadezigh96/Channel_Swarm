@@ -32,7 +32,7 @@ It combines:
 - 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
 - 💳 **PayPal Orders** — separate fiat checkout via PayPal Orders v2 (create, inspect approval, capture; no automatic double charge)
 
-> **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Optional file-based demo persistence is available; it is not a durable payment ledger.
+> **Honest status:** official channel lifecycle builders, a verified PayPal webhook route, a durable KV order/event ledger, and an advisory AI Gateway rail recommender are implemented in the PR branch. This is code-level readiness, not proof of a funded mainnet or PayPal Live end-to-end run. Mainnet transactions and PayPal Live capture remain independently locked.
 
 ---
 
@@ -46,9 +46,10 @@ It combines:
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
-| **PYUSD** | Official mint identification (mainnet + devnet); Token-2022 channel on-chain execution blocked pending compatibility audit |
-| **PayPal Orders** | Separate fiat checkout; capture is approval-gated |
-| **Dashboard** | Dark, agent-first web dashboard |
+| **PYUSD** | Official mint identification; rejected for channel use when active Token-2022 extensions are outside the deployed program allowlist |
+| **PayPal Orders** | Separate checkout; authenticated create/capture routes, verified webhook, persistent KV ledger, and independent Live capture gate |
+| **AI Gateway** | Payment-rail recommendation only; human approval is required and the model cannot execute payments |
+| **Dashboard** | Demo snapshot plus 15-second RPC/configuration health checks; not live payment telemetry |
 
 ---
 
@@ -125,7 +126,7 @@ Official PYUSD mint addresses (Token-2022, 6 decimals; address selection only):
 | Mainnet | `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` |
 | Devnet  | `CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM` |
 
-PYUSD is selected by default in the demo and resolves to devnet unless `PYUSD_NETWORK=mainnet` is explicitly selected. The Payment Channels on-chain integration currently blocks Token-2022 mints until compatibility with the deployed program is independently verified; simulation remains available.
+The deployed Payment Channels program has a documented Token-2022 extension allowlist. PYUSD has active extensions outside that allowlist (including PermanentDelegate), so ChannelSwarm rejects it for channel escrow. The mainnet channel candidate is classic SPL USDC; PYUSD remains identified but is not enabled for this channel path.
 
 ---
 
@@ -172,7 +173,10 @@ ChannelSwarm is aligned primarily with **Build the Future of Stablecoins** (agen
 | Deterministic channel PDA | ✅ |
 | `open` instruction builder | ✅ |
 | `settle` instruction builder | ✅ |
-| `settleAndSeal` instruction builder | ✅ |
+| `settleAndSeal` instruction builder (payee signature) | ✅ |
+| `distribute` instruction builder + recipient splits | ✅ |
+| `seal` forced-close instruction builder | ✅ |
+| `reclaim` instruction builder | ✅ |
 | `requestClose` path | ✅ |
 | Agent swarm demo | ✅ |
 | Reputation gating | ✅ |
@@ -180,10 +184,12 @@ ChannelSwarm is aligned primarily with **Build the Future of Stablecoins** (agen
 | Automated tests | ✅ |
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
-| File-based demo persistence | ⚠️ Not a durable payment ledger |
+| PayPal order/event ledger (Vercel KV / Upstash REST) | ⚠️ Requires KV credentials and live event testing |
 | PYUSD mint identification | ✅ |
-| PYUSD Token-2022 Payment Channels on-chain compatibility | ⚠️ Blocked pending program verification |
-| PayPal Orders v2 create/get/capture + approval gate + webhook verification helper | ⚠️ Sandbox integration; webhook receiver/reconciliation not implemented |
+| PYUSD Token-2022 Payment Channels compatibility | ⚠️ Unsupported active extensions are rejected |
+| PayPal Orders v2 create/get/capture + webhook endpoint + persistent ledger | ⚠️ Code implemented; requires webhook registration, KV and sandbox E2E validation |
+| AI Gateway rail advisor | ⚠️ Code implemented; requires API key and model test |
+| Funded Mainnet lifecycle | ⚠️ Not executed; awaiting explicit approval and operational validation |
 
 ---
 
@@ -208,7 +214,7 @@ NETWORK=devnet ONCHAIN=true npm run demo
 
 With PYUSD:
 ```bash
-USE_PYUSD=true npm run demo
+USE_PYUSD=false NETWORK=devnet npm run demo
 ```
 
 The default is simulation. If devnet on-chain mode is explicitly requested, missing mint/ATA/balance preflight now fails closed instead of silently pretending to settle.
@@ -217,7 +223,7 @@ The default is simulation. If devnet on-chain mode is explicitly requested, miss
 
 ## 🖥️ Dashboard
 
-The checked-in dashboards are static simulation snapshots, not live telemetry. They must not be interpreted as current network balances, agent uptime, or verified on-chain settlement.
+The checked-in dashboard metrics remain static demo snapshots. A separate health panel polls `/api/status` every 15 seconds for RPC reachability and configuration readiness only; it does not show live balances, payments or settlement history.
 
 The repository includes a dedicated web dashboard:
 
@@ -296,3 +302,15 @@ docs/
 ## 📄 License
 
 MIT · Built for PayPal AI Hackathon 2026 + Solana
+
+
+## Mainnet and PayPal Live readiness
+
+- Mainnet stays disabled by default. On-chain mode additionally requires `ONCHAIN=true`, `ALLOW_MAINNET_TRANSACTIONS=true`, and `MAINNET_TX_APPROVED=true`; these are not enabled by the example configuration.
+- The channel candidate is classic SPL USDC (6 decimals). PYUSD is not enabled for Payment Channels because its active Token-2022 extensions are not all accepted by the deployed program.
+- The channel lifecycle includes `open`, voucher signing, `settle`, payee-signed `settleAndSeal`, `distribute`, forced-close `requestClose`/`seal`, and delayed `reclaim`.
+- PayPal routes: `POST /api/paypal/create-order`, `GET /api/paypal/return`, `POST /api/paypal/capture`, and `POST /api/paypal/webhook`. Checkout/capture routes require `CHANNELSWARM_API_TOKEN`; durable KV credentials are required. Webhooks never auto-capture.
+- PayPal Live requires `PAYPAL_LIVE_ENABLED=true`, public HTTPS return/cancel URLs and a registered webhook. Real capture separately requires `PAYPAL_LIVE_CAPTURE_ENABLED=true` and remains off by default.
+- AI rail advice uses Vercel AI Gateway via `AI_GATEWAY_API_KEY` and `AI_GATEWAY_MODEL`. It is advisory only and cannot sign, create, or capture payments.
+- `/api/status` reports RPC/configuration health only. The x402 replay watermark remains in-memory in this demo server and must be moved to durable storage before production.
+- No Mainnet transaction, real PayPal capture, or Production deployment is performed by this preparation work.
