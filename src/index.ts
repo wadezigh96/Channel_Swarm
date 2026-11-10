@@ -1,10 +1,13 @@
-export { ChannelManager, PAYMENT_CHANNELS_PROGRAM_ID } from "./payments/channel-manager.js";
+export { ChannelManager, PAYMENT_CHANNELS_PROGRAM_ID, unsupportedToken2022MintExtensions } from "./payments/channel-manager.js";
 export {
   buildOpenInstruction,
   buildSettleInstruction,
   buildSettleAndSealInstruction,
   buildRequestCloseInstruction,
   buildEd25519VoucherIx,
+  buildDistributeInstruction,
+  buildReclaimInstruction,
+  encodeDistributionPreimage,
   encodeOpenData,
 } from "./payments/instructions.js";
 export { StocknizedAgent } from "./stock/stocknized-agent.js";

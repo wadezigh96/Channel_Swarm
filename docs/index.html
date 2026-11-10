@@ -36,6 +36,26 @@ footer{border-top:1px solid #202020;padding:30px 0 45px;margin-top:45px;color:#4
 <section class="card"><div class="head"><div><div class="kicker">04 · STOCKNIZED</div><h2>Paper portfolio</h2></div><span class="tag">DEMO DATA</span></div><div class="portfolio"><div class="stock"><b>AAPL</b><span>0.0109 · $228.50</span></div><div class="stock"><b>TSLA</b><span>0.0101 · $248.20</span></div><div class="stock"><b>NVDA</b><span>0.0189 · $132.40</span></div><div class="stock"><b>MSFT</b><span>0.0059 · $425.10</span></div></div><p class="muted" style="margin-top:18px">Paper-trading snapshot only. This is a static demo snapshot, not live account data. Live Backpack/Jupiter execution is opt-in and requires credentials, funded accounts and risk review.</p></section></div>
 <section class="card"><div class="head"><div><div class="kicker">05 · OPERATIONS</div><h2>Execution trace</h2></div><span class="tag">DEMO LOG</span></div><div class="log"><div><b>[SWARM]</b> 3 agents online</div><div><span class="s">[CHANNEL]</span> Alpha → DataOracle · ceiling 5 USDC</div><div><span class="x">[X402]</span> voucher #01 · 0.002 USDC · signed</div><div><span class="x">[X402]</span> voucher #02 · cumulative watermark advanced</div><div style="color:#3d3d3d">... 18 more vouchers ...</div><div><span class="a">[STOCK]</span> paper trades → AAPL · TSLA · NVDA · MSFT</div><div><b>[SETTLE]</b> Ed25519 precompile → settle → distribute</div><div><span class="s">[REPUTATION]</span> DataOracle 1.05 · Alpha 1.02</div></div></section>
 <section class="card program"><div><div class="kicker" style="color:#9bbf5a">06 · SOLANA PROGRAM</div><h2 style="margin:6px 0 0;font-size:20px">Payment Channels integration</h2><div class="programId">CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX</div></div><a class="button" href="https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX" target="_blank">OPEN EXPLORER ↗</a></section>
-<footer><span>CHANNELSWARM · SOLANA · MIT</span><span>Agentic payments with explicit spending controls.</span></footer>
+<footer><span>CHANNELSWARM · SOLANA · MIT</span><span>Agentic payments with explicit spending controls.</span></footer><section class="card" id="runtime-health" style="margin-top:18px"><div class="head"><div><div class="kicker">07 · RUNTIME HEALTH</div><h2>Live service checks</h2></div><span class="tag" id="runtime-health-state">CHECKING</span></div><div class="rows"><div class="row"><span>Network / RPC</span><b id="health-rpc">Checking…</b></div><div class="row"><span>Transaction mode</span><b id="health-tx">Checking…</b></div><div class="row"><span>PayPal</span><b id="health-paypal">Checking…</b></div><div class="row"><span>Persistent ledger</span><b id="health-ledger">Checking…</b></div><div class="row"><span>AI Gateway</span><b id="health-ai">Checking…</b></div></div><p class="muted" id="health-note" style="margin-top:12px">This panel checks service configuration and RPC health only. It does not show live balances, payments, or transaction history.</p></section>
+<script>
+(async function(){
+ const el=id=>document.getElementById(id);
+ async function refresh(){
+  try{
+   const response=await fetch('/api/status',{cache:'no-store'});
+   if(!response.ok)throw new Error('health endpoint unavailable');
+   const s=await response.json();
+   el('runtime-health-state').textContent=s.rpcHealthy?'RPC HEALTHY':'RPC UNAVAILABLE';
+   el('health-rpc').textContent=(s.network||'unknown')+' · '+(s.rpcHealthy?'healthy':'unavailable');
+   el('health-tx').textContent=s.mainnetTransactionGate?'MAINNET GATE ENABLED':s.transactionMode;
+   el('health-paypal').textContent=s.paypalMode+' · '+(s.paypalCredentialsConfigured?'credentials set':'credentials missing')+' · capture '+(s.paypalLiveCaptureGate?'enabled':'locked');
+   el('health-ledger').textContent=s.durableLedgerConfigured?'configured':'not configured';
+   el('health-ai').textContent=s.aiAdvisorConfigured?'configured':'API key missing';
+   el('health-note').textContent='Checked '+new Date(s.checkedAt).toLocaleTimeString()+' · '+s.note;
+  }catch(e){el('runtime-health-state').textContent='STATUS OFFLINE';el('health-note').textContent='Live health endpoint is not available on this static preview. Demo figures above remain static.';}
+ }
+ await refresh();setInterval(refresh,15000);
+})();
+</script>
 </div>
 </body></html>

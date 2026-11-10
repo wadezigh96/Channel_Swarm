@@ -40,8 +40,8 @@ export function isOnchainMode(): boolean {
   if (!enabled) return false;
   const network = (process.env.NETWORK ?? "devnet").trim().toLowerCase();
   if (network === "mainnet" || network === "mainnet-beta") {
-    if (process.env.ALLOW_MAINNET_TRANSACTIONS !== "true") {
-      throw new Error("Mainnet transactions are locked; explicit ALLOW_MAINNET_TRANSACTIONS=true is required.");
+    if (process.env.ALLOW_MAINNET_TRANSACTIONS !== "true" || process.env.MAINNET_TX_APPROVED !== "true") {
+      throw new Error("Mainnet transactions are locked; both ALLOW_MAINNET_TRANSACTIONS=true and MAINNET_TX_APPROVED=true are required after explicit operator approval.");
     }
     return true;
   }

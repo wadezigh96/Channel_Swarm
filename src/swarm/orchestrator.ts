@@ -119,9 +119,17 @@ export class SwarmOrchestrator {
 
   /** Capture only after PayPal confirms buyer approval. Pass a stable requestId for safe retries. */
   async capturePayPalCheckout(orderId: string, requestId?: string) {
+    if (!this.paymentLedger.isConfigured()) throw new Error("durable_payment_ledger_required_for_paypal_checkout");
+    const record = await this.paymentLedger.get(orderId);
+    if (!record) throw new Error("paypal_order_not_in_durable_ledger");
+    if (record.status === "COMPLETED") throw new Error("paypal_order_already_completed");
     const order = await this.paypal.getOrder(orderId);
     if (order.status !== "APPROVED") throw new Error(`paypal_order_not_approved: ${order.status}`);
-    return this.paypal.captureOrder(orderId, requestId);
+    await this.paymentLedger.save({ ...record, status: "APPROVED", updatedAt: new Date().toISOString() });
+    const captured = await this.paypal.captureOrder(orderId, requestId);
+    const capture = captured.purchase_units?.flatMap((unit) => unit.payments?.captures ?? []).find((item) => item.status === "COMPLETED");
+    await this.paymentLedger.save({ ...record, status: capture ? "COMPLETED" : "PENDING", updatedAt: new Date().toISOString() });
+    return captured;
   }
 
   listAgents() {
