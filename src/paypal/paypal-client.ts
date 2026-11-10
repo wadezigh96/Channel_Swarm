@@ -49,7 +49,7 @@ export class PayPalClient {
     return this.accessToken;
   }
 
-  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement", requestId = randomUUID()): Promise<PayPalOrder> {
+  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement", requestId: string = randomUUID()): Promise<PayPalOrder> {
     if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("paypal_amount_must_be_positive");
     const token = await this.getAccessToken();
     const body = {
@@ -84,7 +84,7 @@ export class PayPalClient {
     return await res.json() as PayPalOrderDetails;
   }
 
-  async captureOrder(orderId: string, requestId = randomUUID()): Promise<PayPalOrderDetails> {
+  async captureOrder(orderId: string, requestId: string = randomUUID()): Promise<PayPalOrderDetails> {
     if (!orderId.trim()) throw new Error("paypal_order_id_required");
     const token = await this.getAccessToken();
     const res = await fetch(`${this.baseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
