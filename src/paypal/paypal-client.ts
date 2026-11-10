@@ -112,7 +112,7 @@ export class PayPalClient {
     return await res.json() as PayPalOrderDetails;
   }
 
-  async captureOrder(id: string, requestId = randomUUID()): Promise<PayPalOrderDetails> {
+  async captureOrder(id: string, requestId: string = randomUUID()): Promise<PayPalOrderDetails> {
     if (!id.trim()) throw new Error("paypal_order_id_required");
     if (this.mode === "live" && process.env.PAYPAL_LIVE_CAPTURE_ENABLED !== "true") {
       throw new Error("PayPal live capture locked; explicit PAYPAL_LIVE_CAPTURE_ENABLED=true is required.");

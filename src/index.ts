@@ -16,3 +16,7 @@ export { ReputationRegistry } from "./reputation/reputation.js";
 export { loadPayerFromEnv, isOnchainMode } from "./wallet.js";
 
 export type { Voucher, OpenedChannel, ChannelConfig, OpenChannelParams } from "./payments/channel-manager.js";
+
+export { advisePaymentRail } from "./ai/rail-advisor.js";
+export type { RailAdvice, PaymentRail } from "./ai/rail-advisor.js";
+export { PayPalLedger } from "./paypal/payment-ledger.js";
