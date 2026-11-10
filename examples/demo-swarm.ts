@@ -3,36 +3,49 @@
  *
  *   npm run demo              # simulation (default)
  *   ONCHAIN=true npm run demo # send real txs if wallet is funded
+ *   USE_PYUSD=true npm run demo  # use official PYUSD mint instead of USDC
  */
 
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SwarmOrchestrator } from "../src/swarm/orchestrator.js";
 import { loadPayerFromEnv, isOnchainMode } from "../src/wallet.js";
+import { getPyusdMint, PYUSD_INFO } from "../src/payments/pyusd.js";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-function banner(onchain: boolean) {
+function banner(onchain: boolean, usePyusd: boolean) {
   console.log("");
   console.log("═".repeat(55));
   console.log("  ChannelSwarm — Agentic Payments on Solana");
   console.log(`  Mode: ${onchain ? "ON-CHAIN" : "SIMULATION"}`);
+  if (usePyusd) {
+    console.log(`  Asset: PYUSD (${PYUSD_INFO.symbol}) — ${getPyusdMint().toBase58().slice(0, 8)}...`);
+  }
   console.log("═".repeat(55));
   console.log("");
 }
 
 async function main() {
   const onchain = isOnchainMode();
-  banner(onchain);
+  const usePyusd = process.env.USE_PYUSD === "true";
+  banner(onchain, usePyusd);
 
   const rpc = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
   const connection = new Connection(rpc, "confirmed");
 
-  const usdcMint = new PublicKey(
-    process.env.USDC_MINT || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-  );
+  const mint = usePyusd
+    ? getPyusdMint()
+    : new PublicKey(
+        process.env.USDC_MINT || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+      );
 
-  const swarm = new SwarmOrchestrator(connection, usdcMint, onchain);
+  if (usePyusd) {
+    console.log(`[PYUSD] Using ${PYUSD_INFO.name} mint: ${mint.toBase58()}`);
+    console.log(`[PYUSD] Network: ${process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet"}`);
+  }
+
+  const swarm = new SwarmOrchestrator(connection, mint, onchain);
   const reputation = swarm.getReputation();
 
   const fundedPayer = loadPayerFromEnv();
@@ -80,6 +93,9 @@ async function main() {
   console.log("  Dashboard: https://swarm-agent-beta.vercel.app/");
   if (!onchain) {
     console.log("  To attempt real txs: ONCHAIN=true SOLANA_PRIVATE_KEY=... npm run demo");
+  }
+  if (usePyusd) {
+    console.log("  PYUSD mode: fund payer with devnet PYUSD (faucet.paxos.com)");
   }
   console.log("═".repeat(55) + "\n");
 }
