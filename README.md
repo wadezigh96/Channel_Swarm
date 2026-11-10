@@ -7,6 +7,7 @@
 **Agents that can earn · spend · coordinate · settle**
 
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-9945FF?style=for-the-badge&logo=solana&logoColor=white)](https://solana.com/)
+[![PayPal](https://img.shields.io/badge/PayPal-Orders%20v2-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://developer.paypal.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/wadezigh96/Channel_Swarm/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/wadezigh96/Channel_Swarm/actions)
 [![License](https://img.shields.io/badge/license-MIT-111111?style=for-the-badge)](LICENSE)
@@ -19,7 +20,7 @@
 
 ## 🧠 What is ChannelSwarm?
 
-**ChannelSwarm** is a Solana-native prototype for agent-to-agent payments.
+**ChannelSwarm** is a Solana-native prototype for agent-to-agent payments with dual-rail settlement (Solana + PayPal).
 
 It combines:
 
@@ -29,6 +30,7 @@ It combines:
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
 - 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
+- 💳 **PayPal Orders** — dual-rail fiat settlement via PayPal Orders v2 API
 
 > **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Production persistence is available via optional file-based store (`data/` directory). Enabled by default in simulation mode.
 
@@ -45,6 +47,7 @@ It combines:
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
 | **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
+| **PayPal Orders** | Dual-rail fiat settlement |
 | **Dashboard** | Dark, agent-first web dashboard |
 
 ---
@@ -77,6 +80,7 @@ flowchart TB
     end
 
     SOL["Solana wallet / funded payer"] -.->|SOL + USDC/PYUSD| PC
+    PAYPAL["PayPal Orders v2"] -.->|fiat rail| O
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
@@ -90,6 +94,7 @@ flowchart TB
 | **Payment Channels** | Solana on-chain settlement primitive |
 | **x402-style HTTP** | Payment-required resource flow using signed vouchers |
 | **Stocknized Agent** | Strategy + unified execution path + proofs |
+| **PayPal Client** | Dual-rail Orders v2 settlement |
 
 ## 💸 Payment Channel
 
@@ -176,6 +181,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
 | Production persistence (file-based) | ✅ |
 | PYUSD (PayPal USD) mint support | ✅ |
+| PayPal Orders v2 dual-rail | ✅ |
 
 ---
 
@@ -225,6 +231,7 @@ src/
 │   ├── channel-manager.ts
 │   ├── instructions.ts
 │   ├── pyusd.ts
+│   ├── paypal-client.ts
 │   ├── voucher.test.ts
 │   ├── x402-server.ts
 │   └── x402.test.ts
@@ -248,7 +255,8 @@ examples/
 ├── equity-execution-demo.ts
 ├── stocklana-demo.ts
 ├── verify-backpack-stocks.ts
-└── x402-demo.ts
+├── x402-demo.ts
+└── paypal-swarm-demo.ts
 
 docs/
 └── index.html
@@ -264,6 +272,7 @@ docs/
 - **On-chain payment channels:** opt-in and requires a funded payer.
 - **Default demo:** simulation-first to avoid sending doomed transactions.
 - **PYUSD:** official mints supported; on-chain usage requires Token-2022 compatible channel program.
+- **PayPal:** sandbox Orders v2 for dual-rail settlement.
 
 ---
 
@@ -276,9 +285,10 @@ docs/
 - [Solana Payment Channels](https://github.com/solana-foundation/payment-channels)
 - [Program Explorer](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX)
 - [PYUSD on Solana](https://solana.com/pyusd)
+- [PayPal Developer](https://developer.paypal.com/)
 
 ---
 
 ## 📄 License
 
-MIT · Built for Solana Hackathons 2026
+MIT · Built for PayPal AI Hackathon 2026 + Solana
