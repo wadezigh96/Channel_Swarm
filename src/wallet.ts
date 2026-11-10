@@ -25,13 +25,17 @@ export function requirePayer(): Keypair {
   const kp = loadPayerFromEnv();
   if (!kp) {
     throw new Error(
-      "SOLANA_PRIVATE_KEY missing or invalid. Set it in .env to run ONCHAIN=true."
+      "SOLANA_PRIVATE_KEY missing or invalid. Required for mainnet transactions."
     );
   }
   return kp;
 }
 
+/**
+ * Mainnet real transactions are the default.
+ * Set ONCHAIN=false only for local testing.
+ */
 export function isOnchainMode(): boolean {
-  const v = (process.env.ONCHAIN ?? process.env.MODE ?? "sim").toLowerCase();
-  return v === "1" || v === "true" || v === "onchain";
+  const v = (process.env.ONCHAIN ?? "true").toLowerCase();
+  return v !== "0" && v !== "false" && v !== "sim";
 }
