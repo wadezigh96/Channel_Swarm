@@ -3,7 +3,7 @@ import {test} from "node:test";
 import {Keypair,PublicKey} from "@solana/web3.js";
 import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import {buildOpenInstruction,buildDistributeInstruction,buildSettleAndSealInstruction,buildSealInstruction,encodeDistributionPreimage} from "./instructions.js";
-import {PAYMENT_CHANNELS_PROGRAM_ID,unsupportedToken2022MintExtensions} from "./channel-manager.js";
+import {PAYMENT_CHANNELS_PROGRAM_ID,unsupportedToken2022MintExtensions,ChannelManager} from "./channel-manager.js";
 
 test("open builder encodes current official recipient preimage",()=>{
  const payer=Keypair.generate().publicKey,payee=Keypair.generate().publicKey,mint=new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),channel=Keypair.generate().publicKey,recipient=Keypair.generate().publicKey;
@@ -34,4 +34,18 @@ test("Token-2022 mint parser rejects unsupported permanent delegate extension",(
 test("Token-2022 mint parser accepts metadata pointer extension id",()=>{
  const data=new Uint8Array(166+4+64);data[165]=1;data[166]=18;data[167]=0;data[168]=64;data[169]=0;
  assert.deepEqual(unsupportedToken2022MintExtensions(data),[]);
+});
+
+test("ChannelManager cannot bypass the explicit on-chain wallet guard",()=>{
+ const oldOnchain=process.env.ONCHAIN,oldNetwork=process.env.NETWORK;
+ process.env.ONCHAIN="false";process.env.NETWORK="devnet";
+ try{
+  assert.throws(()=>new ChannelManager({
+   connection:{} as any,payer:Keypair.generate(),
+   usdcMint:new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),onchain:true,
+  }),/onchain_mode_not_authorized_by_wallet_safety_gates/);
+ }finally{
+  if(oldOnchain===undefined)delete process.env.ONCHAIN;else process.env.ONCHAIN=oldOnchain;
+  if(oldNetwork===undefined)delete process.env.NETWORK;else process.env.NETWORK=oldNetwork;
+ }
 });

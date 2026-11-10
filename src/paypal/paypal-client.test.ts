@@ -95,3 +95,16 @@ test("PayPal Live capture remains locked independently of Live API mode", async 
     if (old.capture === undefined) delete process.env.PAYPAL_LIVE_CAPTURE_ENABLED; else process.env.PAYPAL_LIVE_CAPTURE_ENABLED = old.capture;
   }
 });
+
+test("PayPal Live capture remains locked even when Live order creation is enabled",async()=>{
+ const oldMode=process.env.PAYPAL_MODE,oldLive=process.env.PAYPAL_LIVE_ENABLED,oldCapture=process.env.PAYPAL_LIVE_CAPTURE_ENABLED;
+ process.env.PAYPAL_MODE="live";process.env.PAYPAL_LIVE_ENABLED="true";delete process.env.PAYPAL_LIVE_CAPTURE_ENABLED;
+ try{
+  const client=new PayPalClient();
+  await assert.rejects(()=>client.captureOrder("ORDER-123"),/PayPal live capture locked/);
+ }finally{
+  if(oldMode===undefined)delete process.env.PAYPAL_MODE;else process.env.PAYPAL_MODE=oldMode;
+  if(oldLive===undefined)delete process.env.PAYPAL_LIVE_ENABLED;else process.env.PAYPAL_LIVE_ENABLED=oldLive;
+  if(oldCapture===undefined)delete process.env.PAYPAL_LIVE_CAPTURE_ENABLED;else process.env.PAYPAL_LIVE_CAPTURE_ENABLED=oldCapture;
+ }
+});

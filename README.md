@@ -225,11 +225,7 @@ The default is simulation. If devnet on-chain mode is explicitly requested, miss
 
 The checked-in dashboard metrics remain static demo snapshots. A separate health panel polls `/api/status` every 15 seconds for RPC reachability and configuration readiness only; it does not show live balances, payments or settlement history.
 
-The repository includes a dedicated web dashboard:
-
-**https://swarm-agent-beta.vercel.app/**
-
-The dashboard is intentionally separate from the repository page: it is the interactive product surface, while this README is the project/hackathon presentation layer.
+The current production dashboard URL is still attached to the unchanged `main` deployment. The updated feature branch is available as a Vercel Preview through PR #1; do not treat the old production URL as proof that these branch changes are live.
 
 ---
 
@@ -310,7 +306,9 @@ MIT · Built for PayPal AI Hackathon 2026 + Solana
 - The channel candidate is classic SPL USDC (6 decimals). PYUSD is not enabled for Payment Channels because its active Token-2022 extensions are not all accepted by the deployed program.
 - The channel lifecycle includes `open`, voucher signing, `settle`, payee-signed `settleAndSeal`, `distribute`, forced-close `requestClose`/`seal`, and delayed `reclaim`.
 - PayPal routes: `POST /api/paypal/create-order`, `GET /api/paypal/return`, `POST /api/paypal/capture`, and `POST /api/paypal/webhook`. Checkout/capture routes require `CHANNELSWARM_API_TOKEN`; durable KV credentials are required. Webhooks never auto-capture.
-- PayPal Live requires `PAYPAL_LIVE_ENABLED=true`, public HTTPS return/cancel URLs and a registered webhook. Real capture separately requires `PAYPAL_LIVE_CAPTURE_ENABLED=true` and remains off by default.
-- AI rail advice uses Vercel AI Gateway via `AI_GATEWAY_API_KEY` and `AI_GATEWAY_MODEL`. It is advisory only and cannot sign, create, or capture payments.
+- PayPal Live order creation requires `PAYPAL_LIVE_ENABLED=true`, public HTTPS return/cancel URLs and a registered webhook. Real capture separately requires `PAYPAL_LIVE_CAPTURE_ENABLED=true` and remains off by default.
+- AI rail advice uses Vercel AI Gateway via `AI_GATEWAY_API_KEY` (or Vercel OIDC token in the function request) and `AI_GATEWAY_MODEL`. It is advisory only and cannot sign, create, or capture payments.
 - `/api/status` reports RPC/configuration health only. The x402 replay watermark remains in-memory in this demo server and must be moved to durable storage before production.
+- `ChannelManager` now checks `isOnchainMode()` itself, so callers cannot bypass the wallet environment gates by passing `onchain: true` directly.
+- `.env.example` defaults to devnet USDC; use the documented mainnet USDC mint only when deliberately switching the network configuration.
 - No Mainnet transaction, real PayPal capture, or Production deployment is performed by this preparation work.
