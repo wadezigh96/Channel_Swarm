@@ -62,7 +62,7 @@ export class PayPalClient {
     return this.accessToken;
   }
 
-  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement", requestId = randomUUID()): Promise<PayPalOrder> {
+  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement", requestId: string = randomUUID()): Promise<PayPalOrder> {
     if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("paypal_amount_must_be_positive");
     if (!requestId || requestId.length > 38) throw new Error("paypal_request_id_must_be_1_to_38_characters");
     if (this.mode === "live") {
