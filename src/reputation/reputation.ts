@@ -4,7 +4,11 @@
  * Simple but effective reputation system for the swarm.
  * Agents check reputation before opening Payment Channels.
  * Successful settlements increase score; failures decrease it.
+ *
+ * Optional file persistence via src/persistence.ts
  */
+
+import { loadJson, saveJson, isPersistenceEnabled } from "../persistence.js";
 
 export interface ReputationRecord {
   agentId: string;
@@ -15,8 +19,30 @@ export interface ReputationRecord {
   lastUpdated: number;
 }
 
+const REPUTATION_FILE = "reputation.json";
+
 export class ReputationRegistry {
   private records = new Map<string, ReputationRecord>();
+
+  constructor() {
+    this.load();
+  }
+
+  private load() {
+    if (!isPersistenceEnabled()) return;
+    const saved = loadJson<ReputationRecord[]>(REPUTATION_FILE, []);
+    for (const rec of saved) {
+      this.records.set(rec.agentId, rec);
+    }
+    if (saved.length) {
+      console.log(`[Reputation] Loaded ${saved.length} records from disk`);
+    }
+  }
+
+  private save() {
+    if (!isPersistenceEnabled()) return;
+    saveJson(REPUTATION_FILE, Array.from(this.records.values()));
+  }
 
   register(agentId: string): ReputationRecord {
     if (this.records.has(agentId)) return this.records.get(agentId)!;
@@ -30,6 +56,7 @@ export class ReputationRegistry {
       lastUpdated: Date.now(),
     };
     this.records.set(agentId, record);
+    this.save();
     return record;
   }
 
@@ -52,6 +79,7 @@ export class ReputationRegistry {
     rec.score = Math.min(5.0, rec.score + 0.05 + volumeUsdc * 0.01);
     rec.lastUpdated = Date.now();
     this.records.set(agentId, rec);
+    this.save();
     return rec.score;
   }
 
@@ -61,6 +89,7 @@ export class ReputationRegistry {
     rec.score = Math.max(0.1, rec.score - 0.15);
     rec.lastUpdated = Date.now();
     this.records.set(agentId, rec);
+    this.save();
     return rec.score;
   }
 

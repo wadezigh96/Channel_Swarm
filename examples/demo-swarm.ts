@@ -77,7 +77,7 @@ async function main() {
 
   console.log("\n" + "═".repeat(55));
   console.log("  Demo complete.");
-  console.log("  Dashboard: https://wadezigh96.github.io/Swarm_Agent/index.html");
+  console.log("  Dashboard: https://swarm-agent-beta.vercel.app/");
   if (!onchain) {
     console.log("  To attempt real txs: ONCHAIN=true SOLANA_PRIVATE_KEY=... npm run demo");
   }

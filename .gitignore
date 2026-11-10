@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Persistence data (optional local state)
+data/
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Vercel
+.vercel
