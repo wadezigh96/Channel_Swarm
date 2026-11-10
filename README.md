@@ -28,6 +28,7 @@ It combines:
 - 🛡️ **Reputation** — score-gated agent participation
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
+- 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
 
 > **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Production persistence is available via optional file-based store (`data/` directory). Enabled by default in simulation mode.
 
@@ -43,6 +44,7 @@ It combines:
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
+| **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
 | **Dashboard** | Dark, agent-first web dashboard |
 
 ---
@@ -74,7 +76,7 @@ flowchart TB
         PROOF --> O
     end
 
-    SOL["Solana wallet / funded payer"] -.->|SOL + USDC| PC
+    SOL["Solana wallet / funded payer"] -.->|SOL + USDC/PYUSD| PC
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
@@ -108,6 +110,20 @@ Voucher wire format:
 ```
 
 Each voucher is authenticated with **Ed25519**.
+
+### PYUSD (PayPal USD)
+
+Official PYUSD mints (Token-2022, 6 decimals):
+
+| Network | Mint |
+|---------|------|
+| Mainnet | `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` |
+| Devnet  | `CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM` |
+
+Enable with:
+```bash
+USE_PYUSD=true npm run demo
+```
 
 ---
 
@@ -159,6 +175,7 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
 | Production persistence (file-based) | ✅ |
+| PYUSD (PayPal USD) mint support | ✅ |
 
 ---
 
@@ -179,6 +196,11 @@ For an on-chain payment-channel attempt:
 ```bash
 # Fund the payer with SOL + the required devnet USDC first.
 ONCHAIN=true npm run demo
+```
+
+With PYUSD:
+```bash
+USE_PYUSD=true npm run demo
 ```
 
 Without a funded wallet, the demo safely remains in simulation mode.
@@ -202,6 +224,7 @@ src/
 ├── payments/
 │   ├── channel-manager.ts
 │   ├── instructions.ts
+│   ├── pyusd.ts
 │   ├── voucher.test.ts
 │   ├── x402-server.ts
 │   └── x402.test.ts
@@ -240,6 +263,7 @@ docs/
 - **Persistence:** optional file-based persistence (reputation + stock portfolio) in `data/`. Default on for simulation.
 - **On-chain payment channels:** opt-in and requires a funded payer.
 - **Default demo:** simulation-first to avoid sending doomed transactions.
+- **PYUSD:** official mints supported; on-chain usage requires Token-2022 compatible channel program.
 
 ---
 
@@ -251,6 +275,7 @@ docs/
 - [Submission](SUBMISSION.md)
 - [Solana Payment Channels](https://github.com/solana-foundation/payment-channels)
 - [Program Explorer](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX)
+- [PYUSD on Solana](https://solana.com/pyusd)
 
 ---
 
