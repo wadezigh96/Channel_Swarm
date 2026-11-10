@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {Keypair,PublicKey} from "@solana/web3.js";
 import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
-import {buildOpenInstruction,buildDistributeInstruction,buildSettleAndSealInstruction,encodeDistributionPreimage} from "./instructions.js";
+import {buildOpenInstruction,buildDistributeInstruction,buildSettleAndSealInstruction,buildSealInstruction,encodeDistributionPreimage} from "./instructions.js";
 import {PAYMENT_CHANNELS_PROGRAM_ID,unsupportedToken2022MintExtensions} from "./channel-manager.js";
 
 test("open builder encodes current official recipient preimage",()=>{
@@ -22,6 +22,10 @@ test("distribution preimage rejects duplicate recipients and invalid totals",()=
 test("settleAndSeal requires payee signer meta",()=>{
  const payee=Keypair.generate().publicKey,channel=Keypair.generate().publicKey,ix=buildSettleAndSealInstruction(payee,channel,true);
  assert.equal(ix.keys[0].isSigner,true);assert.equal(ix.data[0],4);assert.equal(ix.data[1],1);
+});
+test("forced-close seal builder matches official discriminator and account list",()=>{
+ const channel=Keypair.generate().publicKey,ix=buildSealInstruction(channel);
+ assert.equal(ix.data[0],6);assert.equal(ix.keys.length,1);assert.equal(ix.keys[0].isWritable,true);
 });
 test("Token-2022 mint parser rejects unsupported permanent delegate extension",()=>{
  const data=new Uint8Array(166+4+32);data[165]=1;data[166]=12;data[167]=0;data[168]=32;data[169]=0;

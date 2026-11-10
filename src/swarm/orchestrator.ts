@@ -60,6 +60,8 @@ export class SwarmOrchestrator {
   if(record.status==="COMPLETED")throw new Error("paypal_order_already_completed");
   const order=await this.paypal.getOrder(orderId);
   if(order.status!=="APPROVED")throw new Error("paypal_order_not_approved: "+order.status);
+  const unit=order.purchase_units?.[0];
+  if(!unit||unit.amount?.currency_code!=="USD"||unit.amount.value!==record.amountUsd||unit.custom_id!==record.requestId)throw new Error("paypal_order_does_not_match_persisted_payment_intent");
   await this.paymentLedger.save({...record,status:"APPROVED",updatedAt:new Date().toISOString()});
   const captured=await this.paypal.captureOrder(orderId,requestId);
   const capture=captured.purchase_units?.flatMap(u=>u.payments?.captures??[]).find(c=>c.status==="COMPLETED");

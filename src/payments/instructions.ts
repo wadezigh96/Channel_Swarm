@@ -51,6 +51,9 @@ export function buildSettleAndSealInstruction(payee:PublicKey,channel:PublicKey,
 export function buildRequestCloseInstruction(payer:PublicKey,channel:PublicKey,programId:PublicKey=PAYMENT_CHANNELS_PROGRAM_ID):TransactionInstruction {
  return new TransactionInstruction({programId,keys:[{pubkey:payer,isSigner:true,isWritable:false},{pubkey:channel,isSigner:false,isWritable:true}],data:Buffer.from([5])});
 }
+export function buildSealInstruction(channel:PublicKey,programId:PublicKey=PAYMENT_CHANNELS_PROGRAM_ID):TransactionInstruction {
+ return new TransactionInstruction({programId,keys:[{pubkey:channel,isSigner:false,isWritable:true}],data:Buffer.from([6])});
+}
 export interface DistributeIxParams {
  channel:PublicKey;payer:PublicKey;rentPayer:PublicKey;payee:PublicKey;mint:PublicKey;tokenProgram:PublicKey;treasuryOwner:PublicKey;recipients?:DistributionEntry[];programId?:PublicKey;
 }

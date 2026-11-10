@@ -76,3 +76,22 @@ test("webhook verification requires configured webhook ID", async () => {
     if (old === undefined) delete process.env.PAYPAL_WEBHOOK_ID; else process.env.PAYPAL_WEBHOOK_ID = old;
   }
 });
+
+test("PayPal Live capture remains locked independently of Live API mode", async () => {
+  const old = {
+    mode: process.env.PAYPAL_MODE,
+    live: process.env.PAYPAL_LIVE_ENABLED,
+    capture: process.env.PAYPAL_LIVE_CAPTURE_ENABLED,
+  };
+  process.env.PAYPAL_MODE = "live";
+  process.env.PAYPAL_LIVE_ENABLED = "true";
+  delete process.env.PAYPAL_LIVE_CAPTURE_ENABLED;
+  try {
+    const client = new PayPalClient();
+    await assert.rejects(() => client.captureOrder("ORDER-LIVE"), /PayPal live capture locked/);
+  } finally {
+    if (old.mode === undefined) delete process.env.PAYPAL_MODE; else process.env.PAYPAL_MODE = old.mode;
+    if (old.live === undefined) delete process.env.PAYPAL_LIVE_ENABLED; else process.env.PAYPAL_LIVE_ENABLED = old.live;
+    if (old.capture === undefined) delete process.env.PAYPAL_LIVE_CAPTURE_ENABLED; else process.env.PAYPAL_LIVE_CAPTURE_ENABLED = old.capture;
+  }
+});

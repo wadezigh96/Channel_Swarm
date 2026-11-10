@@ -4,6 +4,7 @@ export {
   buildSettleInstruction,
   buildSettleAndSealInstruction,
   buildRequestCloseInstruction,
+  buildSealInstruction,
   buildEd25519VoucherIx,
   buildDistributeInstruction,
   buildReclaimInstruction,
