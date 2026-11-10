@@ -4,6 +4,9 @@
  *   npm run demo              # simulation (default)
  *   ONCHAIN=true npm run demo # send real txs if wallet is funded
  *   USE_PYUSD=true npm run demo  # use official PYUSD mint instead of USDC
+ *
+ * Dual-rail: if PAYPAL_CLIENT_ID + SECRET are set, a PayPal order is created
+ * automatically after the Solana channel settles.
  */
 
 import { Connection, PublicKey } from "@solana/web3.js";
@@ -90,6 +93,12 @@ async function main() {
 
   console.log("\n" + "═".repeat(55));
   console.log("  Demo complete.");
+  if (result.paypalOrderId) {
+    console.log(`  Dual-rail PayPal order: ${result.paypalOrderId}`);
+    if (result.paypalApproveUrl) {
+      console.log(`  Approve: ${result.paypalApproveUrl}`);
+    }
+  }
   console.log("  Dashboard: https://swarm-agent-beta.vercel.app/");
   if (!onchain) {
     console.log("  To attempt real txs: ONCHAIN=true SOLANA_PRIVATE_KEY=... npm run demo");
