@@ -1,14 +1,14 @@
 /**
- * ChannelSwarm demo — mainnet real transactions
+ * ChannelSwarm demo — devnet simulation by default
  *
  * Requires:
- *   SOLANA_PRIVATE_KEY  (funded with SOL + PYUSD)
- *   Optional: PAYPAL_CLIENT_ID + SECRET for dual-rail
+ *   Optional: SOLANA_PRIVATE_KEY for explicit devnet on-chain testing
+ *   Optional: PAYPAL_CLIENT_ID + SECRET for separate PayPal sandbox checkout
  *
  * Defaults:
- *   Network: mainnet-beta
- *   Asset:   PYUSD (2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo)
- *   Mode:    ONCHAIN=true (real txs)
+ *   Network: devnet
+ *   Asset:   PYUSD devnet mint
+ *   Mode:    simulation (ONCHAIN=false)
  */
 
 import { Connection, PublicKey } from "@solana/web3.js";
@@ -22,10 +22,10 @@ dotenv.config();
 function banner(onchain: boolean, usePyusd: boolean) {
   console.log("");
   console.log("═".repeat(55));
-  console.log("  ChannelSwarm — Agentic Payments on Solana MAINNET");
+  console.log("  ChannelSwarm — Agentic Payments on Solana");
   console.log(`  Mode: ${onchain ? "ON-CHAIN (real)" : "SIMULATION"}`);
   if (usePyusd) {
-    console.log(`  Asset: PYUSD (${PYUSD_INFO.symbol}) — mainnet`);
+    console.log(`  Asset: PYUSD (${PYUSD_INFO.symbol}) — ${process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet"}`);
   }
   console.log("═".repeat(55));
   console.log("");
@@ -34,9 +34,10 @@ function banner(onchain: boolean, usePyusd: boolean) {
 async function main() {
   const onchain = isOnchainMode();
   const usePyusd = (process.env.USE_PYUSD ?? "true") === "true";
+  const network = (process.env.NETWORK || "devnet").toLowerCase();
   banner(onchain, usePyusd);
 
-  const rpc = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+  const rpc = process.env.SOLANA_RPC_URL || (network === "mainnet" || network === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : network === "testnet" ? "https://api.testnet.solana.com" : "https://api.devnet.solana.com");
   const connection = new Connection(rpc, "confirmed");
 
   const mint = usePyusd
@@ -47,7 +48,7 @@ async function main() {
 
   if (usePyusd) {
     console.log(`[PYUSD] Using ${PYUSD_INFO.name} mint: ${mint.toBase58()}`);
-    console.log(`[PYUSD] Network: mainnet`);
+    console.log(`[PYUSD] Network: ${process.env.PYUSD_NETWORK || network}`);
   }
 
   if (onchain) {
@@ -82,7 +83,7 @@ async function main() {
     return;
   }
 
-  console.log("\n--- Running demo cycle (mainnet) ---");
+  console.log("\n--- Running demo cycle (${network}) ---");
   const result = await swarm.runDemoCycle();
 
   console.log("\n--- Final Reputation Leaderboard ---");
@@ -101,12 +102,7 @@ async function main() {
     console.log(`  On-chain signature: ${result.signature}`);
     console.log(`  Explorer: https://explorer.solana.com/tx/${result.signature}`);
   }
-  if (result.paypalOrderId) {
-    console.log(`  Dual-rail PayPal order: ${result.paypalOrderId}`);
-    if (result.paypalApproveUrl) {
-      console.log(`  Approve: ${result.paypalApproveUrl}`);
-    }
-  }
+  console.log("  PayPal is a separate checkout rail; it is never charged automatically after Solana settlement.");
   console.log("  Dashboard: https://swarm-agent-beta.vercel.app/");
   console.log("═".repeat(55) + "\n");
 }

@@ -4,10 +4,10 @@
 ChannelSwarm
 
 ## Tagline
-Autonomous multi-agent economy on Solana with official Payment Channels, PYUSD, and PayPal dual-rail settlement
+Autonomous multi-agent economy on Solana with Solana Payment Channels, PYUSD mint identification, and a separate PayPal checkout rail
 
 ## Short Description (card / list)
-ChannelSwarm is a Solana-native agent economy that combines the live Payment Channels program, 50-byte Ed25519 vouchers, reputation-gated A2A micropayments, Stocknized Agents, and dual-rail settlement (Solana channels + PayPal Orders + official PYUSD).
+ChannelSwarm is a Solana-native agent economy that combines the live Payment Channels program, 50-byte Ed25519 vouchers, reputation-gated A2A micropayments, Stocknized Agents, and selectable payment rails: Solana channels or PayPal Orders v2 checkout.
 
 ## Full Description
 
@@ -23,15 +23,12 @@ ChannelSwarm combines four capabilities:
 
 3. **Stocknized Agent** — Tokenized-equity strategy with paper default and opt-in live execution (Backpack RFQ or Jupiter xStock). Execution proofs are generated for both simulated and live fills.
 
-4. **Dual-rail settlement** — Agents can settle via:
-   - Solana Payment Channels (USDC or official PYUSD)
-   - PayPal Orders v2 sandbox (agent-to-human or cross-rail)
-   - Official PYUSD mint on Solana (Token-2022)
+4. **Selectable payment rails** — A payment intent selects either Solana channel settlement or PayPal Orders v2 sandbox checkout. The orchestrator no longer creates a PayPal order after a Solana settlement. PayPal capture is only exposed after the order is verified as APPROVED. PYUSD mint addresses are recognized, but on-chain Token-2022 channel compatibility remains blocked pending independent verification.
 
 ### Why this is differentiated
 - Live Solana Payment Channels program ID + compatible 50-byte Ed25519 voucher implementation
 - Official PYUSD mint support (mainnet + devnet) on Solana
-- Working PayPal sandbox Orders client for dual-rail agent settlement
+- PayPal sandbox Orders v2 create/get/capture client with approval check and webhook-signature verification helper
 - Reputation-gated multi-agent swarm with persistence
 - Stocknized layer with explicit execution modes and proofs
 
@@ -60,8 +57,8 @@ npx tsx examples/paypal-swarm-demo.ts
 ### Submission notes
 - **Target track:** Best Use of Agentic Commerce / Agentic Payments
 - **Dual-rail:** Solana Payment Channels + PayPal Orders + PYUSD
-- **Demo status:** simulation-first by default; on-chain and PayPal paths are opt-in and functional in sandbox
-- **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works
+- **Demo status:** simulation-first by default; PayPal sandbox order creation is available (no automatic capture); webhook receiver and durable reconciliation are not implemented; PYUSD Token-2022 on-chain channel settlement is blocked pending program compatibility verification
+- **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works. Dashboards are static snapshots. No mainnet transaction or deployment is part of this submission
 
 ### Team
 Solo

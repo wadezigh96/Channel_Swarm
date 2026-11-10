@@ -16,7 +16,7 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getAccount } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, getAccount, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import nacl from "tweetnacl";
 import {
   buildOpenInstruction,
@@ -79,6 +79,7 @@ export class ChannelManager {
   private usdcMint: PublicKey;
   private programId: PublicKey;
   private onchain: boolean;
+  private tokenProgram = TOKEN_PROGRAM_ID;
   private openChannels = new Map<string, OpenedChannel>();
 
   constructor(config: ChannelConfig) {
@@ -125,10 +126,13 @@ export class ChannelManager {
     let mode: "sim" | "onchain" = "sim";
 
     if (this.onchain) {
+      this.tokenProgram = await this.resolveTokenProgram();
+      if (this.tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
+        throw new Error("Token-2022 mint detected; on-chain Payment Channels compatibility is not verified. Use simulation until the program integration is audited.");
+      }
       const funded = await this.hasUsdc(ceiling);
-      if (!funded.ok) {
-        console.warn(`[Channel] ONCHAIN requested but ${funded.reason} — falling back to sim`);
-      } else {
+      if (!funded.ok) throw new Error(`onchain_preflight_failed: ${funded.reason}`);
+      {
         const ix = buildOpenInstruction({
           payer: this.payer.publicKey,
           rentPayer: this.payer.publicKey,
@@ -142,6 +146,7 @@ export class ChannelManager {
           openSlot: BigInt(openSlot),
           recipients: [],
           programId: this.programId,
+          tokenProgram: this.tokenProgram,
         });
         const tx = new Transaction().add(ix);
         signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
@@ -305,10 +310,18 @@ export class ChannelManager {
     });
   }
 
+  private async resolveTokenProgram(): Promise<PublicKey> {
+    const mintInfo = await this.connection.getAccountInfo(this.usdcMint, "confirmed");
+    if (!mintInfo) throw new Error("payment_mint_not_found");
+    if (mintInfo.owner.equals(TOKEN_PROGRAM_ID)) return TOKEN_PROGRAM_ID;
+    if (mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) return TOKEN_2022_PROGRAM_ID;
+    throw new Error("unsupported_payment_mint_owner");
+  }
+
   private async hasUsdc(needed: bigint): Promise<{ ok: boolean; reason?: string }> {
     try {
-      const ata = getAssociatedTokenAddressSync(this.usdcMint, this.payer.publicKey);
-      const acc = await getAccount(this.connection, ata);
+      const ata = getAssociatedTokenAddressSync(this.usdcMint, this.payer.publicKey, false, this.tokenProgram);
+      const acc = await getAccount(this.connection, ata, "confirmed", this.tokenProgram);
       if (acc.amount < needed) {
         return {
           ok: false,
@@ -321,7 +334,7 @@ export class ChannelManager {
       }
       return { ok: true };
     } catch {
-      return { ok: false, reason: "payer USDC ATA missing" };
+      return { ok: false, reason: "payer payment-token ATA missing" };
     }
   }
 

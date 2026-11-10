@@ -17,6 +17,7 @@ import {
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { PAYMENT_CHANNELS_PROGRAM_ID } from "./channel-manager.js";
@@ -48,6 +49,7 @@ export interface OpenIxParams {
 export function buildOpenInstruction(p: OpenIxParams): TransactionInstruction {
   const programId = p.programId ?? PAYMENT_CHANNELS_PROGRAM_ID;
   const tokenProgram = p.tokenProgram ?? TOKEN_PROGRAM_ID;
+  if (!tokenProgram.equals(TOKEN_PROGRAM_ID) && !tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) throw new Error("unsupported_token_program");
   const recipients = p.recipients ?? [];
 
   const data = encodeOpenData({

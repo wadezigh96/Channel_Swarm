@@ -1,150 +1,119 @@
-/**
- * PayPal Sandbox Client for ChannelSwarm
- * Uses Orders v2 API for agent-to-human or dual-rail settlement.
- *
- * Credentials from env:
- *   PAYPAL_CLIENT_ID
- *   PAYPAL_CLIENT_SECRET
- *   PAYPAL_MODE=sandbox (default)
- */
+import { randomUUID } from "node:crypto";
 
-export interface PayPalOrder {
+export interface PayPalLink { href: string; rel: string; method: string }
+export interface PayPalOrder { id: string; status: string; links: PayPalLink[]; approveUrl?: string }
+export interface PayPalOrderDetails {
   id: string;
   status: string;
-  links: { href: string; rel: string; method: string }[];
-  approveUrl?: string;
+  purchase_units?: Array<{ amount?: { currency_code?: string; value?: string }; payments?: { captures?: Array<{ id: string; status: string }> } }>;
+}
+export interface PayPalWebhookHeaders {
+  transmissionId: string;
+  transmissionTime: string;
+  certUrl: string;
+  authAlgo: string;
+  transmissionSig: string;
 }
 
+/** PayPal Orders v2 client. Creating an order never captures funds. */
 export class PayPalClient {
-  private clientId: string;
-  private clientSecret: string;
+  private clientId = process.env.PAYPAL_CLIENT_ID || "";
+  private clientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
+  private webhookId = process.env.PAYPAL_WEBHOOK_ID || "";
   private baseUrl: string;
   private accessToken: string | null = null;
   private tokenExpiry = 0;
 
   constructor() {
-    this.clientId = process.env.PAYPAL_CLIENT_ID || "";
-    this.clientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
-    const mode = process.env.PAYPAL_MODE || "sandbox";
-    this.baseUrl =
-      mode === "live"
-        ? "https://api-m.paypal.com"
-        : "https://api-m.sandbox.paypal.com";
-
-    if (!this.clientId || !this.clientSecret) {
-      console.warn("[PayPal] Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET — sandbox calls will fail");
-    }
+    const mode = (process.env.PAYPAL_MODE || "sandbox").trim().toLowerCase();
+    if (mode !== "sandbox" && mode !== "live") throw new Error("PAYPAL_MODE must be sandbox or live");
+    this.baseUrl = mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
   }
 
   private async getAccessToken(): Promise<string> {
-    if (this.accessToken && Date.now() < this.tokenExpiry) {
-      return this.accessToken;
-    }
-
+    if (!this.isConfigured()) throw new Error("paypal_credentials_missing");
+    if (this.accessToken && Date.now() < this.tokenExpiry) return this.accessToken;
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64");
     const res = await fetch(`${this.baseUrl}/v1/oauth2/token`, {
       method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: "grant_type=client_credentials",
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`PayPal auth failed: ${res.status} ${err}`);
-    }
-
-    const data = (await res.json()) as { access_token: string; expires_in: number };
+    if (!res.ok) throw new Error(`PayPal auth failed: ${res.status} ${await res.text()}`);
+    const data = await res.json() as { access_token: string; expires_in: number };
     this.accessToken = data.access_token;
-    this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    this.tokenExpiry = Date.now() + Math.max(0, data.expires_in - 60) * 1000;
     return this.accessToken;
   }
 
-  /**
-   * Create a PayPal Order (CAPTURE intent) for agent settlement.
-   * Returns order ID + approval URL.
-   */
-  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement"): Promise<PayPalOrder> {
+  async createOrder(amountUsd: number, description = "ChannelSwarm agent settlement", requestId = randomUUID()): Promise<PayPalOrder> {
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("paypal_amount_must_be_positive");
     const token = await this.getAccessToken();
     const body = {
       intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            currency_code: "USD",
-            value: amountUsd.toFixed(2),
-          },
-          description,
-        },
-      ],
+      purchase_units: [{ amount: { currency_code: "USD", value: amountUsd.toFixed(2) }, description }],
       application_context: {
         brand_name: "ChannelSwarm",
         user_action: "PAY_NOW",
-        return_url: "https://swarm-agent-beta.vercel.app/",
-        cancel_url: "https://swarm-agent-beta.vercel.app/",
+        return_url: process.env.PAYPAL_RETURN_URL || "http://localhost:3000/paypal/return",
+        cancel_url: process.env.PAYPAL_CANCEL_URL || "http://localhost:3000/paypal/cancel",
       },
     };
-
     const res = await fetch(`${this.baseUrl}/v2/checkout/orders`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "PayPal-Request-Id": `channelswarm-${Date.now()}`,
-      },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "PayPal-Request-Id": requestId },
       body: JSON.stringify(body),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`PayPal createOrder failed: ${res.status} ${err}`);
-    }
-
-    const order = (await res.json()) as PayPalOrder;
-    order.approveUrl = order.links?.find((l) => l.rel === "approve")?.href;
-    console.log(`[PayPal] Created order ${order.id} — ${amountUsd} USD`);
-    if (order.approveUrl) console.log(`[PayPal] Approve URL: ${order.approveUrl}`);
+    if (!res.ok) throw new Error(`PayPal createOrder failed: ${res.status} ${await res.text()}`);
+    const order = await res.json() as PayPalOrder;
+    order.approveUrl = order.links?.find((link) => link.rel === "approve" || link.rel === "payer-action")?.href;
+    if (!order.id) throw new Error("paypal_order_id_missing");
     return order;
   }
 
-  /**
-   * Capture an approved order.
-   */
-  async captureOrder(orderId: string): Promise<{ status: string; id: string }> {
+  async getOrder(orderId: string): Promise<PayPalOrderDetails> {
+    if (!orderId.trim()) throw new Error("paypal_order_id_required");
     const token = await this.getAccessToken();
-    const res = await fetch(`${this.baseUrl}/v2/checkout/orders/${orderId}/capture`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`PayPal capture failed: ${res.status} ${err}`);
-    }
-
-    const data = (await res.json()) as { status: string; id: string };
-    console.log(`[PayPal] Captured order ${orderId} → status=${data.status}`);
-    return data;
-  }
-
-  /**
-   * Get order details.
-   */
-  async getOrder(orderId: string): Promise<unknown> {
-    const token = await this.getAccessToken();
-    const res = await fetch(`${this.baseUrl}/v2/checkout/orders/${orderId}`, {
+    const res = await fetch(`${this.baseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(`getOrder failed: ${res.status}`);
-    return res.json();
+    if (!res.ok) throw new Error(`PayPal getOrder failed: ${res.status} ${await res.text()}`);
+    return await res.json() as PayPalOrderDetails;
   }
 
-  isConfigured(): boolean {
-    return Boolean(this.clientId && this.clientSecret);
+  async captureOrder(orderId: string, requestId = randomUUID()): Promise<PayPalOrderDetails> {
+    if (!orderId.trim()) throw new Error("paypal_order_id_required");
+    const token = await this.getAccessToken();
+    const res = await fetch(`${this.baseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "PayPal-Request-Id": requestId },
+    });
+    if (!res.ok) throw new Error(`PayPal capture failed: ${res.status} ${await res.text()}`);
+    return await res.json() as PayPalOrderDetails;
   }
+
+  /** Verify a webhook with PayPal before trusting its event payload. */
+  async verifyWebhook(headers: PayPalWebhookHeaders, event: unknown): Promise<boolean> {
+    if (!this.webhookId) throw new Error("paypal_webhook_id_missing");
+    if (Object.values(headers).some((value) => !value)) throw new Error("paypal_webhook_headers_missing");
+    const token = await this.getAccessToken();
+    const res = await fetch(`${this.baseUrl}/v1/notifications/verify-webhook-signature`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auth_algo: headers.authAlgo,
+        cert_url: headers.certUrl,
+        transmission_id: headers.transmissionId,
+        transmission_sig: headers.transmissionSig,
+        transmission_time: headers.transmissionTime,
+        webhook_id: this.webhookId,
+        webhook_event: event,
+      }),
+    });
+    if (!res.ok) throw new Error(`PayPal webhook verification failed: ${res.status} ${await res.text()}`);
+    const result = await res.json() as { verification_status?: string };
+    return result.verification_status === "SUCCESS";
+  }
+
+  isConfigured(): boolean { return Boolean(this.clientId && this.clientSecret); }
 }

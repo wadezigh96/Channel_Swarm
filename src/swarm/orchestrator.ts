@@ -1,6 +1,6 @@
 /**
  * Swarm Orchestrator — specialized agents pay each other via Payment Channels.
- * Optional dual-rail: after Solana channel settle, create a PayPal sandbox order.
+ * Payment rails are selected explicitly; one intent must never charge both rails.
  */
 
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
@@ -108,33 +108,20 @@ export class SwarmOrchestrator {
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
     if (signature) console.log(`[Swarm] Settle signature: ${signature}`);
 
-    // Dual-rail: after Solana channel settle, create PayPal order if configured
-    let paypalOrderId: string | undefined;
-    let paypalApproveUrl: string | undefined;
-    if (this.paypal.isConfigured() && claimed > 0) {
-      try {
-        const order = await this.paypal.createOrder(
-          claimed,
-          `ChannelSwarm settlement: ${alpha.name} → ${dataAgent.name}`
-        );
-        paypalOrderId = order.id;
-        paypalApproveUrl = order.approveUrl;
-        console.log(`[Dual-rail] PayPal order created for ${claimed.toFixed(4)} USD`);
-      } catch (err) {
-        console.warn("[Dual-rail] PayPal order failed:", err);
-      }
-    } else if (!this.paypal.isConfigured()) {
-      console.log("[Dual-rail] PayPal not configured — Solana channel only");
-    }
+    return { claimed, refunded, signature, channelId };
+  }
 
-    return {
-      claimed,
-      refunded,
-      signature,
-      channelId,
-      paypalOrderId,
-      paypalApproveUrl,
-    };
+  /** Create a fiat checkout instead of settling the same intent on Solana. */
+  async createPayPalCheckout(amountUsd: number, description: string, requestId?: string) {
+    if (!this.paypal.isConfigured()) throw new Error("paypal_credentials_missing");
+    return this.paypal.createOrder(amountUsd, description, requestId);
+  }
+
+  /** Capture only after PayPal confirms buyer approval. Pass a stable requestId for safe retries. */
+  async capturePayPalCheckout(orderId: string, requestId?: string) {
+    const order = await this.paypal.getOrder(orderId);
+    if (order.status !== "APPROVED") throw new Error(`paypal_order_not_approved: ${order.status}`);
+    return this.paypal.captureOrder(orderId, requestId);
   }
 
   listAgents() {

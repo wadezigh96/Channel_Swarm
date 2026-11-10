@@ -20,7 +20,7 @@
 
 ## 🧠 What is ChannelSwarm?
 
-**ChannelSwarm** is a Solana-native prototype for agent-to-agent payments with dual-rail settlement (Solana + PayPal).
+**ChannelSwarm** is a Solana-native prototype for agent-to-agent services and payments. Solana stablecoin channels and PayPal fiat checkout are separate, explicitly selected rails.
 
 It combines:
 
@@ -30,7 +30,7 @@ It combines:
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
 - 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
-- 💳 **PayPal Orders** — dual-rail fiat settlement via PayPal Orders v2 API
+- 💳 **PayPal Orders** — separate fiat checkout via PayPal Orders v2 (create, inspect approval, capture; no automatic double charge)
 
 > **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Production persistence is available via optional file-based store (`data/` directory). Enabled by default in simulation mode.
 
@@ -47,7 +47,7 @@ It combines:
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
 | **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
-| **PayPal Orders** | Dual-rail fiat settlement |
+| **PayPal Orders** | Separate fiat checkout; capture is approval-gated |
 | **Dashboard** | Dark, agent-first web dashboard |
 
 ---
@@ -80,7 +80,7 @@ flowchart TB
     end
 
     SOL["Solana wallet / funded payer"] -.->|SOL + USDC/PYUSD| PC
-    PAYPAL["PayPal Orders v2"] -.->|fiat rail| O
+    PAYPAL["PayPal checkout (separate intent)"] -.->|selected fiat rail| O
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
@@ -94,7 +94,7 @@ flowchart TB
 | **Payment Channels** | Solana on-chain settlement primitive |
 | **x402-style HTTP** | Payment-required resource flow using signed vouchers |
 | **Stocknized Agent** | Strategy + unified execution path + proofs |
-| **PayPal Client** | Dual-rail Orders v2 settlement |
+| **PayPal Client** | Separate Orders v2 checkout; optional webhook-signature verification |
 
 ## 💸 Payment Channel
 
@@ -118,17 +118,14 @@ Each voucher is authenticated with **Ed25519**.
 
 ### PYUSD (PayPal USD)
 
-Official PYUSD mints (Token-2022, 6 decimals):
+Official PYUSD mint addresses (Token-2022, 6 decimals; address selection only):
 
 | Network | Mint |
 |---------|------|
 | Mainnet | `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` |
 | Devnet  | `CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM` |
 
-Enable with:
-```bash
-USE_PYUSD=true npm run demo
-```
+PYUSD is selected by default in the demo and resolves to devnet unless `PYUSD_NETWORK=mainnet` is explicitly selected. The Payment Channels on-chain integration currently blocks Token-2022 mints until compatibility with the deployed program is independently verified; simulation remains available.
 
 ---
 
@@ -152,6 +149,10 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 ```
 
 ---
+
+## 🎯 Solana Request for Startups alignment
+
+ChannelSwarm is aligned primarily with **Build the Future of Stablecoins** (agent-to-agent stablecoin payments and merchant settlement) and secondarily with **Open Marketplace for AI Inference** (a future service-provider marketplace paid through the same agent payment primitives). The repository currently implements a prototype swarm and payment primitives; it does not yet claim a production inference marketplace, durable provider discovery, or production settlement reconciliation. See the [Solana Request for Startups](https://solana.com/request-for-startups.md).
 
 ## 🤖 Agent Roster
 
@@ -179,9 +180,10 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | Automated tests | ✅ |
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
-| Production persistence (file-based) | ✅ |
-| PYUSD (PayPal USD) mint support | ✅ |
-| PayPal Orders v2 dual-rail | ✅ |
+| File-based demo persistence | ⚠️ Not a durable payment ledger |
+| PYUSD mint identification | ✅ |
+| PYUSD Token-2022 Payment Channels on-chain compatibility | ⚠️ Blocked pending program verification |
+| PayPal Orders v2 create/get/capture + approval gate + webhook verification helper | ⚠️ Sandbox integration; webhook receiver/reconciliation not implemented |
 
 ---
 
@@ -201,7 +203,7 @@ For an on-chain payment-channel attempt:
 
 ```bash
 # Fund the payer with SOL + the required devnet USDC first.
-ONCHAIN=true npm run demo
+NETWORK=devnet ONCHAIN=true npm run demo
 ```
 
 With PYUSD:
@@ -209,11 +211,13 @@ With PYUSD:
 USE_PYUSD=true npm run demo
 ```
 
-Without a funded wallet, the demo safely remains in simulation mode.
+The default is simulation. If devnet on-chain mode is explicitly requested, missing mint/ATA/balance preflight now fails closed instead of silently pretending to settle.
 
 ---
 
 ## 🖥️ Dashboard
+
+The checked-in dashboards are static simulation snapshots, not live telemetry. They must not be interpreted as current network balances, agent uptime, or verified on-chain settlement.
 
 The repository includes a dedicated web dashboard:
 

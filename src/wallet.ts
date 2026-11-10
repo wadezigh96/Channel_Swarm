@@ -25,17 +25,26 @@ export function requirePayer(): Keypair {
   const kp = loadPayerFromEnv();
   if (!kp) {
     throw new Error(
-      "SOLANA_PRIVATE_KEY missing or invalid. Required for mainnet transactions."
+      "SOLANA_PRIVATE_KEY missing or invalid. Required for on-chain transactions."
     );
   }
   return kp;
 }
 
 /**
- * Mainnet real transactions are the default.
- * Set ONCHAIN=false only for local testing.
+ * Real transactions are disabled unless explicitly enabled.
+ * Mainnet additionally requires a separate acknowledgement.
  */
 export function isOnchainMode(): boolean {
-  const v = (process.env.ONCHAIN ?? "true").toLowerCase();
-  return v !== "0" && v !== "false" && v !== "sim";
+  const enabled = (process.env.ONCHAIN ?? "false").trim().toLowerCase() === "true";
+  if (!enabled) return false;
+  const network = (process.env.NETWORK ?? "devnet").trim().toLowerCase();
+  if (network === "mainnet" || network === "mainnet-beta") {
+    if (process.env.ALLOW_MAINNET_TRANSACTIONS !== "true") {
+      throw new Error("Mainnet transactions are locked; explicit ALLOW_MAINNET_TRANSACTIONS=true is required.");
+    }
+    return true;
+  }
+  if (network !== "devnet" && network !== "testnet") throw new Error(`Unsupported Solana NETWORK: ${network}`);
+  return true;
 }
