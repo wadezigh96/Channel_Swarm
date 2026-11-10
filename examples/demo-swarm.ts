@@ -65,7 +65,7 @@ async function main() {
   const stock = swarm.addAgent("StockHunter", "stock");
 
   if (onchain && !fundedPayer) {
-    throw new Error("ONCHAIN=true but SOLANA_PRIVATE_KEY is missing. Real mainnet transactions require a funded wallet.");
+    throw new Error("ONCHAIN=true but SOLANA_PRIVATE_KEY is missing. Real on-chain transactions require a funded wallet.");
   }
 
   console.log("\n--- Agents online ---");
@@ -83,7 +83,7 @@ async function main() {
     return;
   }
 
-  console.log("\n--- Running demo cycle (${network}) ---");
+  console.log(`\n--- Running demo cycle (${network}) ---`);
   const result = await swarm.runDemoCycle();
 
   console.log("\n--- Final Reputation Leaderboard ---");

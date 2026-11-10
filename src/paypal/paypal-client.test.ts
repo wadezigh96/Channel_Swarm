@@ -3,11 +3,31 @@ import { test } from "node:test";
 import { PayPalClient } from "./paypal-client.js";
 
 test("PayPal rejects invalid amounts before making network calls", async () => {
+  const oldId = process.env.PAYPAL_CLIENT_ID;
+  const oldSecret = process.env.PAYPAL_CLIENT_SECRET;
   process.env.PAYPAL_CLIENT_ID = "test-client";
   process.env.PAYPAL_CLIENT_SECRET = "test-secret";
-  const client = new PayPalClient();
-  await assert.rejects(() => client.createOrder(0), /paypal_amount_must_be_positive/);
-  await assert.rejects(() => client.createOrder(Number.NaN), /paypal_amount_must_be_positive/);
+  try {
+    const client = new PayPalClient();
+    await assert.rejects(() => client.createOrder(0), /paypal_amount_must_be_positive/);
+    await assert.rejects(() => client.createOrder(Number.NaN), /paypal_amount_must_be_positive/);
+  } finally {
+    if (oldId === undefined) delete process.env.PAYPAL_CLIENT_ID; else process.env.PAYPAL_CLIENT_ID = oldId;
+    if (oldSecret === undefined) delete process.env.PAYPAL_CLIENT_SECRET; else process.env.PAYPAL_CLIENT_SECRET = oldSecret;
+  }
+});
+
+test("PayPal live mode is locked unless separately enabled", () => {
+  const oldMode = process.env.PAYPAL_MODE;
+  const oldEnabled = process.env.PAYPAL_LIVE_ENABLED;
+  process.env.PAYPAL_MODE = "live";
+  delete process.env.PAYPAL_LIVE_ENABLED;
+  try {
+    assert.throws(() => new PayPalClient(), /PayPal live mode is locked/);
+  } finally {
+    if (oldMode === undefined) delete process.env.PAYPAL_MODE; else process.env.PAYPAL_MODE = oldMode;
+    if (oldEnabled === undefined) delete process.env.PAYPAL_LIVE_ENABLED; else process.env.PAYPAL_LIVE_ENABLED = oldEnabled;
+  }
 });
 
 test("PayPal order creation returns approval link and does not capture", async () => {

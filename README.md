@@ -32,7 +32,7 @@ It combines:
 - 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
 - 💳 **PayPal Orders** — separate fiat checkout via PayPal Orders v2 (create, inspect approval, capture; no automatic double charge)
 
-> **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Production persistence is available via optional file-based store (`data/` directory). Enabled by default in simulation mode.
+> **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Optional file-based demo persistence is available; it is not a durable payment ledger.
 
 ---
 
@@ -46,7 +46,7 @@ It combines:
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
-| **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
+| **PYUSD** | Official mint identification (mainnet + devnet); Token-2022 channel on-chain execution blocked pending compatibility audit |
 | **PayPal Orders** | Separate fiat checkout; capture is approval-gated |
 | **Dashboard** | Dark, agent-first web dashboard |
 
@@ -79,8 +79,8 @@ flowchart TB
         PROOF --> O
     end
 
-    SOL["Solana wallet / funded payer"] -.->|SOL + USDC/PYUSD| PC
-    PAYPAL["PayPal checkout (separate intent)"] -.->|selected fiat rail| O
+    SOL["Solana wallet / funded payer"] -.->|SOL + supported SPL token| PC
+    PAYPAL["PayPal checkout (separate intent)"] -.->|selected fiat rail, never auto-combined| O
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 

@@ -27,7 +27,7 @@ ChannelSwarm combines four capabilities:
 
 ### Why this is differentiated
 - Live Solana Payment Channels program ID + compatible 50-byte Ed25519 voucher implementation
-- Official PYUSD mint support (mainnet + devnet) on Solana
+- Official PYUSD mint address identification; on-chain Token-2022 settlement is not enabled
 - PayPal sandbox Orders v2 create/get/capture client with approval check and webhook-signature verification helper
 - Reputation-gated multi-agent swarm with persistence
 - Stocknized layer with explicit execution modes and proofs
@@ -39,8 +39,7 @@ cd Channel_Swarm
 npm install
 npm run demo
 
-# Optional: PYUSD mode
-USE_PYUSD=true npm run demo
+# Optional: PYUSD devnet simulation (default)
 
 # Optional: PayPal sandbox order
 # (set PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET in .env)
@@ -56,7 +55,7 @@ npx tsx examples/paypal-swarm-demo.ts
 
 ### Submission notes
 - **Target track:** Best Use of Agentic Commerce / Agentic Payments
-- **Dual-rail:** Solana Payment Channels + PayPal Orders + PYUSD
+- **Payment rails:** choose Solana Payment Channels OR PayPal Orders checkout per intent; PYUSD Token-2022 channel execution remains blocked pending compatibility verification
 - **Demo status:** simulation-first by default; PayPal sandbox order creation is available (no automatic capture); webhook receiver and durable reconciliation are not implemented; PYUSD Token-2022 on-chain channel settlement is blocked pending program compatibility verification
 - **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works. Dashboards are static snapshots. No mainnet transaction or deployment is part of this submission
 

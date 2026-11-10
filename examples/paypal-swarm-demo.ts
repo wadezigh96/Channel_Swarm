@@ -24,7 +24,7 @@ async function main() {
 
   console.log("\n[1] Creating PayPal order for agent settlement...");
   const amount = 5.0;
-  const order = await paypal.createOrder(amount, "StockHunter → Alpha agent settlement", "channelswarm-demo-order-5-usd");
+  const order = await paypal.createOrder(amount, "StockHunter → Alpha agent settlement");
 
   console.log(`\nOrder ID: ${order.id}`);
   console.log(`Status:   ${order.status}`);

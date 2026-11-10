@@ -27,6 +27,9 @@ export class PayPalClient {
   constructor() {
     const mode = (process.env.PAYPAL_MODE || "sandbox").trim().toLowerCase();
     if (mode !== "sandbox" && mode !== "live") throw new Error("PAYPAL_MODE must be sandbox or live");
+    if (mode === "live" && process.env.PAYPAL_LIVE_ENABLED !== "true") {
+      throw new Error("PayPal live mode is locked; set PAYPAL_LIVE_ENABLED=true only after explicit payment review.");
+    }
     this.baseUrl = mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
   }
 
