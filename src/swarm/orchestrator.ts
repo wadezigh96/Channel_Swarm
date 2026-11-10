@@ -1,11 +1,13 @@
 /**
  * Swarm Orchestrator — specialized agents pay each other via Payment Channels.
+ * Optional dual-rail: after Solana channel settle, create a PayPal sandbox order.
  */
 
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { ChannelManager } from "../payments/channel-manager.js";
 import { StocknizedAgent } from "../stock/stocknized-agent.js";
 import { ReputationRegistry } from "../reputation/reputation.js";
+import { PayPalClient } from "../paypal/paypal-client.js";
 
 export interface AgentIdentity {
   name: string;
@@ -21,6 +23,7 @@ export class SwarmOrchestrator {
   private stockAgent: StocknizedAgent | null = null;
   private usdcMint: PublicKey;
   private onchain: boolean;
+  private paypal: PayPalClient;
 
   private reputation = new ReputationRegistry();
 
@@ -28,6 +31,7 @@ export class SwarmOrchestrator {
     this.connection = connection;
     this.usdcMint = usdcMint;
     this.onchain = onchain;
+    this.paypal = new PayPalClient();
   }
 
   getReputation(): ReputationRegistry {
@@ -104,7 +108,33 @@ export class SwarmOrchestrator {
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
     if (signature) console.log(`[Swarm] Settle signature: ${signature}`);
 
-    return { claimed, refunded, signature, channelId };
+    // Dual-rail: after Solana channel settle, create PayPal order if configured
+    let paypalOrderId: string | undefined;
+    let paypalApproveUrl: string | undefined;
+    if (this.paypal.isConfigured() && claimed > 0) {
+      try {
+        const order = await this.paypal.createOrder(
+          claimed,
+          `ChannelSwarm settlement: ${alpha.name} → ${dataAgent.name}`
+        );
+        paypalOrderId = order.id;
+        paypalApproveUrl = order.approveUrl;
+        console.log(`[Dual-rail] PayPal order created for ${claimed.toFixed(4)} USD`);
+      } catch (err) {
+        console.warn("[Dual-rail] PayPal order failed:", err);
+      }
+    } else if (!this.paypal.isConfigured()) {
+      console.log("[Dual-rail] PayPal not configured — Solana channel only");
+    }
+
+    return {
+      claimed,
+      refunded,
+      signature,
+      channelId,
+      paypalOrderId,
+      paypalApproveUrl,
+    };
   }
 
   listAgents() {
