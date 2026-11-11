@@ -12,7 +12,7 @@ test("PayPal ledger atomically records and deduplicates webhook events",async()=
   if(args[0]==="GET")result=store.get(args[1])??null;
   else if(args[0]==="EVAL"){
    const script=args[1],numKeys=Number(args[2]),keys=args.slice(3,3+numKeys),argv=args.slice(3+numKeys);
-   if(script.includes("local ranks=")&&script.includes("local duplicate=")){
+   if(script.includes("EXISTS")&&script.includes("KEYS[1]")){
     const [orderId,eventType,status,updatedAt,eventId]=argv,eventKey=keys[0],orderKey=keys[1];
     const duplicate=store.has(eventKey),priorRaw=store.get(orderKey);
     let record=priorRaw?JSON.parse(priorRaw):{orderId,status:"UNKNOWN",updatedAt};
@@ -26,7 +26,7 @@ test("PayPal ledger atomically records and deduplicates webhook events",async()=
    }else{
     const [key]=keys,[status,value]=argv,prior=store.get(key);
     const rank:Record<string,number>={UNKNOWN:0,CREATED:1,APPROVED:2,PENDING:3,DENIED:4,COMPLETED:5,REVERSED:6};
-    if(prior&&(rank[JSON.parse(prior).status]??0)>(rank[status]??0))result=0;
+    if(prior&&(rank[JSON.parse(prior).status]??0)>Number(status))result=0;
     else{store.set(key,value);result=1;}
    }
   }
