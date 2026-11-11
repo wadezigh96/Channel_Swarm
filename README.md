@@ -184,12 +184,12 @@ ChannelSwarm is aligned primarily with **Build the Future of Stablecoins** (agen
 | Automated tests | ✅ |
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
-| PayPal order/event ledger (Vercel KV / Upstash REST) | ⚠️ Requires KV credentials and live event testing |
+| PayPal order/event ledger (Vercel KV / Upstash REST) | ⚠️ Code + tests; production credentials required |
 | PYUSD mint identification | ✅ |
-| PYUSD Token-2022 Payment Channels compatibility | ⚠️ Unsupported active extensions are rejected |
-| PayPal Orders v2 create/get/capture + webhook endpoint + persistent ledger | ⚠️ Code implemented; requires webhook registration, KV and sandbox E2E validation |
-| AI Gateway rail advisor | ⚠️ Code implemented; requires API key and model test |
-| Funded Mainnet lifecycle | ⚠️ Not executed; awaiting explicit approval and operational validation |
+| PYUSD Token-2022 Payment Channels compatibility | ✅ Preflight verified; unsupported active extensions fail closed |
+| PayPal Orders v2 create/get/capture + webhook endpoint + persistent ledger | ⚠️ Code + tests; sandbox credentials, webhook and KV required |
+| AI Gateway rail advisor | ✅ Rules fallback verified; AI Gateway is optional |
+| Funded Mainnet lifecycle | ⚠️ Simulation verified; funded mainnet requires explicit approval and operational validation |
 
 ---
 
