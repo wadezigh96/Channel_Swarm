@@ -213,6 +213,27 @@ ONCHAIN=true USE_PYUSD=true npm run demo
 
 The default is simulation, so `npm run demo` needs no private key and sends no on-chain transaction. Only set `ONCHAIN=true` after checking the RPC, payer, mint, token extensions, balance, and fee budget. An explicit on-chain run requires a valid payer key, and any failed preflight stops the run rather than silently recording a simulated channel.
 
+### CLI and MCP integration
+
+The repository now includes a single CLI for the dual-rail workflow:
+
+```bash
+# Read-only PYUSD metadata and Token-2022/payment-channel preflight
+npm run cli -- pyusd info
+npm run cli -- pyusd preflight
+
+# PayPal sandbox order lifecycle; creation never captures automatically
+npm run cli -- paypal create --amount 5 --description "Agent settlement"
+npm run cli -- paypal get --order-id ORDER_ID
+npm run cli -- paypal capture --order-id ORDER_ID --confirm CAPTURE
+
+# Simulation by default; real Solana execution requires both flags
+npm run cli -- pyusd open --payee RECIPIENT_WALLET --amount 1
+npm run cli -- pyusd open --payee RECIPIENT_WALLET --amount 1 --onchain --confirm ONCHAIN
+```
+
+`npm run mcp` starts a newline-delimited MCP stdio server exposing PYUSD metadata, Solana preflight, and PayPal create/get/capture tools. The capture tool requires `confirm: "CAPTURE"`; the server does not turn PayPal approval into an automatic capture. PYUSD on Solana and PayPal Orders are separate settlement rails: PayPal Orders v2 does not itself transfer PYUSD on Solana, so an application must choose or reconcile the rail explicitly.
+
 ---
 
 ## 🖥️ Live Dashboard (Dual-Rail)

@@ -4,6 +4,8 @@
   "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent + PayPal dual-rail",
   "type": "module",
   "scripts": {
+    "cli": "tsx cli/channelswarm.ts",
+    "mcp": "tsx src/mcp/server.ts",
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
     "demo:equity": "tsx examples/equity-execution-demo.ts",
