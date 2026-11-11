@@ -232,7 +232,7 @@ npm run cli -- paypal capture --order-id ORDER_ID --confirm CAPTURE
 npm run cli -- pyusd open --payee RECIPIENT_WALLET --amount 1
 ```
 
-`npm run mcp` starts a newline-delimited MCP stdio server exposing PYUSD metadata, Solana preflight, and PayPal create/get/capture tools. Capture requires `confirm: "CAPTURE"`; on-chain execution remains behind the PR's independent transaction gates. PayPal Orders and PYUSD on Solana are separate settlement rails and are never silently converted into one another.
+`npm run mcp` starts a newline-delimited MCP stdio server exposing PYUSD metadata, Solana preflight, and PayPal create/get/capture tools. Capture requires `confirm: "CAPTURE"`; on-chain execution remains behind the PR's independent transaction gates. PayPal Orders and PYUSD on Solana are separate settlement rails and are never silently converted into one another. See the [MCP PayPal Quickstart](docs/MCP_QUICKSTART.md) for client configuration, environment variables, smoke tests, and the approval-gated order flow.
 
 ---
 
