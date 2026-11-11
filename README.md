@@ -1,6 +1,6 @@
 # ⚡ ChannelSwarm
 
-> **Autonomous Agent Economy on Solana**
+> **Autonomous Agent Economy on Solana + PayPal**
 
 <div align="center">
 
@@ -48,7 +48,7 @@ It combines:
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
 | **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
 | **PayPal Orders** | Dual-rail fiat settlement |
-| **Dashboard** | Dark, agent-first web dashboard |
+| **Dashboard** | Dark, agent-first web dashboard with live PayPal button |
 
 ---
 
@@ -182,6 +182,8 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | Production persistence (file-based) | ✅ |
 | PYUSD (PayPal USD) mint support | ✅ |
 | PayPal Orders v2 dual-rail | ✅ |
+| Live dashboard PayPal button | ✅ |
+| Serverless `/api/paypal-order` | ✅ |
 
 ---
 
@@ -191,35 +193,43 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 git clone https://github.com/wadezigh96/Channel_Swarm.git
 cd Channel_Swarm
 npm install
+cp .env.example .env
+# Fill PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, and optionally SOLANA_PRIVATE_KEY
 
 npm test
 npm run demo
+npm run demo:paypal
 npm run demo:equity
 ```
 
 For an on-chain payment-channel attempt:
 
 ```bash
-# Fund the payer with SOL + the required devnet USDC first.
-ONCHAIN=true npm run demo
-```
-
-With PYUSD:
-```bash
-USE_PYUSD=true npm run demo
+# Fund the payer with SOL + USDC or PYUSD first.
+ONCHAIN=true USE_PYUSD=true npm run demo
 ```
 
 Without a funded wallet, the demo safely remains in simulation mode.
 
 ---
 
-## 🖥️ Dashboard
-
-The repository includes a dedicated web dashboard:
+## 🖥️ Live Dashboard (Dual-Rail)
 
 **https://swarm-agent-beta.vercel.app/**
 
-The dashboard is intentionally separate from the repository page: it is the interactive product surface, while this README is the project/hackathon presentation layer.
+The dashboard now includes a **Create PayPal Order** button that calls the serverless endpoint:
+
+```
+POST /api/paypal-order
+```
+
+Set these environment variables in Vercel (Project Settings → Environment Variables):
+
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_MODE=sandbox`
+
+Once set, the button on the live dashboard creates a real sandbox order and returns the approve URL.
 
 ---
 
@@ -231,10 +241,11 @@ src/
 │   ├── channel-manager.ts
 │   ├── instructions.ts
 │   ├── pyusd.ts
-│   ├── paypal-client.ts
 │   ├── voucher.test.ts
 │   ├── x402-server.ts
 │   └── x402.test.ts
+├── paypal/
+│   └── paypal-client.ts
 ├── swarm/
 │   └── orchestrator.ts
 ├── stock/
@@ -258,8 +269,11 @@ examples/
 ├── x402-demo.ts
 └── paypal-swarm-demo.ts
 
+api/
+└── paypal-order.ts          ← serverless endpoint
+
 docs/
-└── index.html
+└── index.html               ← live dashboard
 ```
 
 ---
@@ -272,7 +286,7 @@ docs/
 - **On-chain payment channels:** opt-in and requires a funded payer.
 - **Default demo:** simulation-first to avoid sending doomed transactions.
 - **PYUSD:** official mints supported; on-chain usage requires Token-2022 compatible channel program.
-- **PayPal:** sandbox Orders v2 for dual-rail settlement.
+- **PayPal:** sandbox Orders v2 for dual-rail settlement. Set credentials in Vercel env for the live button.
 
 ---
 
