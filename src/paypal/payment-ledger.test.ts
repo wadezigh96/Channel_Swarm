@@ -12,7 +12,13 @@ test("PayPal ledger atomically records and deduplicates webhook events",async()=
   if(args[0]==="GET")result=store.get(args[1])??null;
   else if(args[0]==="EVAL"){
    const script=args[1],numKeys=Number(args[2]),keys=args.slice(3,3+numKeys),argv=args.slice(3+numKeys);
-   if(script.includes("EXISTS")&&script.includes("KEYS[1]")){
+   if(script.includes("SET')")&&script.includes("'NX'")){
+    const [key]=keys,[token]=argv;
+    if(store.has(key))result=0;else{store.set(key,token);result=1;}
+   }else if(script.includes("GET')==ARGV[1]")||script.includes("GET')==ARGV[1]")){
+    const [key]=keys,[token]=argv;
+    if(store.get(key)===token){store.delete(key);result=1;}else result=0;
+   }else if(script.includes("EXISTS")&&script.includes("KEYS[1]")){
     const [orderId,eventType,status,updatedAt,eventId]=argv,eventKey=keys[0],orderKey=keys[1];
     const duplicate=store.has(eventKey),priorRaw=store.get(orderKey);
     let record=priorRaw?JSON.parse(priorRaw):{orderId,status:"UNKNOWN",updatedAt};
@@ -52,6 +58,33 @@ test("PayPal ledger refuses to run without persistent KV credentials",async()=>{
  delete process.env.KV_REST_API_URL;delete process.env.KV_REST_API_TOKEN;
  try{await assert.rejects(new PayPalLedger().get("ORDER-1"),/durable_payment_ledger_not_configured/);}
  finally{
+  if(oldUrl===undefined)delete process.env.KV_REST_API_URL;else process.env.KV_REST_API_URL=oldUrl;
+  if(oldToken===undefined)delete process.env.KV_REST_API_TOKEN;else process.env.KV_REST_API_TOKEN=oldToken;
+ }
+});
+
+
+test("PayPal capture lease is exclusive and only its owner can release it",async()=>{
+ const oldUrl=process.env.KV_REST_API_URL,oldToken=process.env.KV_REST_API_TOKEN,oldFetch=globalThis.fetch;
+ process.env.KV_REST_API_URL="https://kv.example.test";process.env.KV_REST_API_TOKEN="test-token";
+ const store=new Map<string,string>();
+ globalThis.fetch=(async(_input,init)=>{
+  const args=JSON.parse(String(init?.body)) as string[],script=args[1],key=args[3],token=args[4];
+  let result:unknown=0;
+  if(script.includes("'NX'")){if(!store.has(key)){store.set(key,token);result=1;}}
+  else if(script.includes("ARGV[1] then return redis.call('DEL'")){if(store.get(key)===token){store.delete(key);result=1;}}
+  return new Response(JSON.stringify({result}),{status:200,headers:{"content-type":"application/json"}});
+ }) as typeof fetch;
+ try{
+  const ledger=new PayPalLedger();
+  assert.equal(await ledger.claimCapture("ORDER-LOCK","owner-a"),true);
+  assert.equal(await ledger.claimCapture("ORDER-LOCK","owner-b"),false);
+  await ledger.releaseCapture("ORDER-LOCK","owner-b");
+  assert.equal(await ledger.claimCapture("ORDER-LOCK","owner-c"),false);
+  await ledger.releaseCapture("ORDER-LOCK","owner-a");
+  assert.equal(await ledger.claimCapture("ORDER-LOCK","owner-c"),true);
+ }finally{
+  globalThis.fetch=oldFetch;
   if(oldUrl===undefined)delete process.env.KV_REST_API_URL;else process.env.KV_REST_API_URL=oldUrl;
   if(oldToken===undefined)delete process.env.KV_REST_API_TOKEN;else process.env.KV_REST_API_TOKEN=oldToken;
  }
