@@ -74,7 +74,7 @@ export class SwarmOrchestrator {
    await this.paymentLedger.save({...record,status:capture?"COMPLETED":"PENDING",updatedAt:new Date().toISOString()});
    return captured;
   }finally{
-   await this.paymentLedger.releaseCapture(orderId,lockToken);
+   try{await this.paymentLedger.releaseCapture(orderId,lockToken);}catch{/* Lease expires automatically; do not mask PayPal result. */}
   }
  }
  /** Model suggestion only; the caller must choose and approve the payment rail. */
