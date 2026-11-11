@@ -4,6 +4,8 @@
   "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent",
   "type": "module",
   "scripts": {
+    "cli": "tsx cli/channelswarm.ts",
+    "mcp": "tsx src/mcp/server.ts",
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
     "demo:equity": "tsx examples/equity-execution-demo.ts",
@@ -34,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@vercel/node": "^5.3.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

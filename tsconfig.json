@@ -11,6 +11,6 @@
     "declaration": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "examples/**/*"],
+  "include": ["src/**/*", "cli/**/*", "examples/**/*", "api/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

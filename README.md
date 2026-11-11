@@ -219,6 +219,21 @@ USE_PYUSD=false NETWORK=devnet npm run demo
 
 The default is simulation. If devnet on-chain mode is explicitly requested, missing mint/ATA/balance preflight now fails closed instead of silently pretending to settle.
 
+### CLI and MCP integration
+
+The repository includes a CLI for read-only PYUSD inspection, Solana preflight, simulation-first channel operations, and PayPal sandbox operations:
+
+```bash
+npm run cli -- pyusd info
+npm run cli -- pyusd preflight
+npm run cli -- paypal create --amount 5 --description "Agent settlement"
+npm run cli -- paypal get --order-id ORDER_ID
+npm run cli -- paypal capture --order-id ORDER_ID --confirm CAPTURE
+npm run cli -- pyusd open --payee RECIPIENT_WALLET --amount 1
+```
+
+`npm run mcp` starts a newline-delimited MCP stdio server exposing PYUSD metadata, Solana preflight, and PayPal create/get/capture tools. Capture requires `confirm: "CAPTURE"`; on-chain execution remains behind the PR's independent transaction gates. PayPal Orders and PYUSD on Solana are separate settlement rails and are never silently converted into one another.
+
 ---
 
 ## 🖥️ Dashboard

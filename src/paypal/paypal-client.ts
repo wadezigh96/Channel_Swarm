@@ -146,5 +146,29 @@ export class PayPalClient {
     return result.verification_status === "SUCCESS";
   }
 
+  async verifyWebhookSignature(
+    headers: { auth_algo: string; cert_url: string; transmission_id: string; transmission_sig: string; transmission_time: string },
+    _webhookId: string,
+    event: unknown
+  ): Promise<boolean> {
+    return this.verifyWebhook({
+      authAlgo: headers.auth_algo,
+      certUrl: headers.cert_url,
+      transmissionId: headers.transmission_id,
+      transmissionSig: headers.transmission_sig,
+      transmissionTime: headers.transmission_time,
+    }, event);
+  }
+
+  async getCapture(id: string): Promise<{ status: string }> {
+    if (!id.trim()) throw new Error("paypal_capture_id_required");
+    const token = await this.getAccessToken();
+    const res = await fetch(this.baseUrl + "/v2/payments/captures/" + encodeURIComponent(id), {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) throw new Error("PayPal getCapture failed: " + res.status);
+    return await res.json() as { status: string };
+  }
+
   isConfigured(): boolean { return Boolean(this.clientId && this.clientSecret); }
 }
