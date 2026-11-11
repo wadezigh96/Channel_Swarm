@@ -1,375 +1,50 @@
 /**
- * ChannelManager — Official Payment Channels client wrapper
- *
- * Program (mainnet live):
- *   CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX
- *
- * Modes:
- *   sim     — local state machine + signed 50-byte vouchers (default)
- *   onchain — builds + sends real open / settle txs when funded
+ * Channel manager for the current Solana Foundation Payment Channels lifecycle.
+ * Mainnet is disabled by default in wallet.ts; do not treat this as a live-money test.
  */
-
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
-import {
-  TOKEN_2022_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-  getAccount,
-  getAssociatedTokenAddressSync,
-  getExtensionTypes,
-  getMint,
-} from "@solana/spl-token";
-import { findUnsupportedChannelMintExtensions } from "./token-compatibility.js";
+import { Connection,Keypair,PublicKey,Transaction,sendAndConfirmTransaction } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync,getAccount,createAssociatedTokenAccountIdempotentInstruction,TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import nacl from "tweetnacl";
-import {
-  buildOpenInstruction,
-  buildSettleInstruction,
-  buildSettleAndSealInstruction,
-  buildEd25519VoucherIx,
-  buildRequestCloseInstruction,
-} from "./instructions.js";
-
-export const PAYMENT_CHANNELS_PROGRAM_ID = new PublicKey(
-  "CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX"
-);
-
-export const CHANNEL_SEED = Buffer.from("channel");
-export const VOUCHER_MAGIC = new Uint8Array([0x56, 0x01]);
-export const VOUCHER_SIZE = 50;
-export const DEFAULT_GRACE_PERIOD = 900;
-
-export interface ChannelConfig {
-  connection: Connection;
-  payer: Keypair;
-  usdcMint: PublicKey;
-  programId?: PublicKey;
-  onchain?: boolean;
+import { isOnchainMode } from "../wallet.js";
+import { buildOpenInstruction,buildSettleInstruction,buildSettleAndSealInstruction,buildEd25519VoucherIx,buildRequestCloseInstruction,buildSealInstruction,buildDistributeInstruction,buildReclaimInstruction,type DistributionEntry } from "./instructions.js";
+export const PAYMENT_CHANNELS_PROGRAM_ID=new PublicKey("CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX");
+export const CHANNEL_SEED=Buffer.from("channel"),VOUCHER_MAGIC=new Uint8Array([0x56,0x01]),VOUCHER_SIZE=50,DEFAULT_GRACE_PERIOD=900,OPEN_SLOT_WINDOW=1500;
+const MINT_EXTENSION_ALLOWLIST=new Set([18,19,20,21,22,23]);
+export interface ChannelConfig {connection:Connection;payer:Keypair;usdcMint:PublicKey;programId?:PublicKey;onchain?:boolean;treasuryOwner?:PublicKey}
+export interface OpenChannelParams {counterparty:PublicKey;ceilingUsdc:number;expirySeconds?:number;salt?:bigint;gracePeriod?:number;recipients?:DistributionEntry[]}
+export interface Voucher {channelId:string;channelPda:PublicKey;cumulativeAmount:bigint;expiresAt:bigint;message:Uint8Array;signature:Uint8Array;timestamp:number}
+export interface OpenedChannel {ceiling:bigint;spent:bigint;counterparty:PublicKey;channelPda:PublicKey;salt:bigint;openSlot:number;lastVoucher?:Voucher;signature?:string;mode:"sim"|"onchain";recipients:DistributionEntry[]}
+export interface SettlementResult {claimed:number;refunded:number;signature?:string;sealSignature?:string;distributeSignature?:string;finalized:boolean}
+export function unsupportedToken2022MintExtensions(data:Uint8Array):number[] {
+ if(data.length<=82)return [];
+ if(data.length<166||data[165]!==1)throw new Error("malformed_token_2022_mint_extension_layout");
+ const bad:number[]=[];let offset=166;
+ while(offset<data.length){if(offset+2>data.length){if(data.slice(offset).some(x=>x!==0))throw new Error("malformed_token_2022_mint_tlv");break;}
+ const type=data[offset]!|(data[offset+1]!<<8);if(type===0){if(data.slice(offset).some(x=>x!==0))throw new Error("malformed_token_2022_mint_tlv_terminator");break;}
+ if(offset+4>data.length)throw new Error("malformed_token_2022_mint_tlv_header");const len=data[offset+2]!|(data[offset+3]!<<8);if(offset+4+len>data.length)throw new Error("malformed_token_2022_mint_tlv_length");
+ if(!MINT_EXTENSION_ALLOWLIST.has(type))bad.push(type);offset+=4+len;}
+ return [...new Set(bad)];
 }
-
-export interface OpenChannelParams {
-  counterparty: PublicKey;
-  ceilingUsdc: number;
-  expirySeconds?: number;
-  salt?: bigint;
-  gracePeriod?: number;
-}
-
-export interface Voucher {
-  channelId: string;
-  channelPda: PublicKey;
-  cumulativeAmount: bigint;
-  expiresAt: bigint;
-  message: Uint8Array;
-  signature: Uint8Array;
-  timestamp: number;
-}
-
-export interface OpenedChannel {
-  ceiling: bigint;
-  spent: bigint;
-  counterparty: PublicKey;
-  channelPda: PublicKey;
-  salt: bigint;
-  openSlot: number;
-  lastVoucher?: Voucher;
-  signature?: string;
-  mode: "sim" | "onchain";
-}
-
+function validateRecipients(entries:DistributionEntry[]){if(entries.length>32)throw new Error("distribution_recipient_limit_exceeded");const seen=new Set<string>();let total=0;for(const e of entries){const k=e.recipient.toBase58();if(seen.has(k))throw new Error("duplicate_distribution_recipient");seen.add(k);if(!Number.isInteger(e.bps)||e.bps<1||e.bps>10000)throw new Error("invalid_distribution_bps");total+=e.bps;}if(total>10000)throw new Error("distribution_bps_exceeds_10000");}
 export class ChannelManager {
-  private connection: Connection;
-  private payer: Keypair;
-  private usdcMint: PublicKey;
-  private programId: PublicKey;
-  private onchain: boolean;
-  private openChannels = new Map<string, OpenedChannel>();
-
-  constructor(config: ChannelConfig) {
-    this.connection = config.connection;
-    this.payer = config.payer;
-    this.usdcMint = config.usdcMint;
-    this.programId = config.programId ?? PAYMENT_CHANNELS_PROGRAM_ID;
-    this.onchain = Boolean(config.onchain);
-  }
-
-  deriveChannelPda(
-    payee: PublicKey,
-    salt: bigint,
-    openSlot: number,
-    authorizedSigner: PublicKey = this.payer.publicKey
-  ): [PublicKey, number] {
-    const saltBuf = Buffer.alloc(8);
-    saltBuf.writeBigUInt64LE(salt);
-    const slotBuf = Buffer.alloc(8);
-    slotBuf.writeBigUInt64LE(BigInt(openSlot));
-
-    return PublicKey.findProgramAddressSync(
-      [
-        CHANNEL_SEED,
-        this.payer.publicKey.toBuffer(),
-        payee.toBuffer(),
-        this.usdcMint.toBuffer(),
-        authorizedSigner.toBuffer(),
-        saltBuf,
-        slotBuf,
-      ],
-      this.programId
-    );
-  }
-
-  async openChannel(params: OpenChannelParams): Promise<string> {
-    const salt = params.salt ?? BigInt(Date.now());
-    const openSlot = await this.connection.getSlot("confirmed");
-    const [channelPda] = this.deriveChannelPda(params.counterparty, salt, openSlot);
-    const channelId = channelPda.toBase58();
-    const ceiling = BigInt(Math.floor(params.ceilingUsdc * 1_000_000));
-
-    let signature: string | undefined;
-    let mode: "sim" | "onchain" = "sim";
-
-    if (this.onchain) {
-      const funded = await this.hasUsdc(ceiling);
-      if (!funded.ok) {
-        throw new Error(`ONCHAIN=true preflight failed; refusing to simulate channel open: ${funded.reason}`);
-      }
-      const tokenProgram = funded.tokenProgram ?? TOKEN_PROGRAM_ID;
-      const ix = buildOpenInstruction({
-        payer: this.payer.publicKey,
-        rentPayer: this.payer.publicKey,
-        payee: params.counterparty,
-        mint: this.usdcMint,
-        authorizedSigner: this.payer.publicKey,
-        channel: channelPda,
-        salt,
-        deposit: ceiling,
-        gracePeriod: params.gracePeriod ?? DEFAULT_GRACE_PERIOD,
-        openSlot: BigInt(openSlot),
-        recipients: [],
-        tokenProgram,
-        programId: this.programId,
-      });
-      const tx = new Transaction().add(ix);
-      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
-        commitment: "confirmed",
-      });
-      mode = "onchain";
-      console.log(`[Channel] On-chain open tx: ${signature}`);
-    }
-
-    this.openChannels.set(channelId, {
-      ceiling,
-      spent: 0n,
-      counterparty: params.counterparty,
-      channelPda,
-      salt,
-      openSlot,
-      signature,
-      mode,
-    });
-
-    console.log(
-      `[Channel] Opened ${channelId.slice(0, 12)}... mode=${mode} ceiling ${params.ceilingUsdc} USDC → ${params.counterparty.toBase58().slice(0, 8)}...`
-    );
-    console.log(
-      `[Channel] Program: https://explorer.solana.com/address/${this.programId.toBase58()}`
-    );
-    return channelId;
-  }
-
-  createVoucherMessage(
-    channelPda: PublicKey,
-    cumulativeAmount: bigint,
-    expiresAt: bigint = 0n
-  ): Uint8Array {
-    const msg = new Uint8Array(VOUCHER_SIZE);
-    msg.set(VOUCHER_MAGIC, 0);
-    msg.set(channelPda.toBytes(), 2);
-    const amountView = new DataView(msg.buffer, 34, 8);
-    amountView.setBigUint64(0, cumulativeAmount, true);
-    const expiryView = new DataView(msg.buffer, 42, 8);
-    expiryView.setBigInt64(0, expiresAt, true);
-    return msg;
-  }
-
-  async createVoucher(channelId: string, amountUsdc: number): Promise<Voucher> {
-    const channel = this.openChannels.get(channelId);
-    if (!channel) throw new Error(`Channel ${channelId} not found`);
-
-    const amount = BigInt(Math.floor(amountUsdc * 1_000_000));
-    const newSpent = channel.spent + amount;
-    if (newSpent > channel.ceiling) {
-      throw new Error(`Would exceed channel ceiling of ${Number(channel.ceiling) / 1e6} USDC`);
-    }
-
-    const message = this.createVoucherMessage(channel.channelPda, newSpent, 0n);
-    const signature = nacl.sign.detached(message, this.payer.secretKey);
-
-    channel.spent = newSpent;
-    const voucher: Voucher = {
-      channelId,
-      channelPda: channel.channelPda,
-      cumulativeAmount: newSpent,
-      expiresAt: 0n,
-      message,
-      signature,
-      timestamp: Date.now(),
-    };
-    channel.lastVoucher = voucher;
-    this.openChannels.set(channelId, channel);
-
-    console.log(
-      `[x402/Channel] Voucher signed — +${amountUsdc} USDC (cumulative ${Number(newSpent) / 1e6}) | 50-byte wire`
-    );
-    return voucher;
-  }
-
-  async settle(channelId: string): Promise<{ claimed: number; refunded: number; signature?: string }> {
-    const channel = this.openChannels.get(channelId);
-    if (!channel) throw new Error(`Channel ${channelId} not found`);
-
-    const claimed = Number(channel.spent) / 1_000_000;
-    const refunded = Number(channel.ceiling - channel.spent) / 1_000_000;
-    let signature: string | undefined;
-
-    if (this.onchain && channel.mode === "onchain" && channel.lastVoucher) {
-      const ed = buildEd25519VoucherIx(
-        this.payer.publicKey,
-        channel.lastVoucher.message,
-        channel.lastVoucher.signature
-      );
-      const settleIx = buildSettleInstruction(channel.channelPda, this.programId);
-      const tx = new Transaction().add(ed, settleIx);
-      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
-        commitment: "confirmed",
-      });
-      console.log(`[Settle] On-chain settle tx: ${signature}`);
-    } else {
-      console.log(
-        `[Settle] ${channel.mode} path — claimed ${claimed.toFixed(4)} USDC, refunded ${refunded.toFixed(4)} USDC`
-      );
-    }
-
-    this.openChannels.delete(channelId);
-    return { claimed, refunded, signature };
-  }
-
-  async settleAndSeal(channelId: string): Promise<{ claimed: number; refunded: number; signature?: string }> {
-    const channel = this.openChannels.get(channelId);
-    if (!channel) throw new Error(`Channel ${channelId} not found`);
-
-    const claimed = Number(channel.spent) / 1_000_000;
-    const refunded = Number(channel.ceiling - channel.spent) / 1_000_000;
-    let signature: string | undefined;
-
-    if (this.onchain && channel.mode === "onchain") {
-      const voucher = channel.lastVoucher;
-      const ed = voucher
-        ? buildEd25519VoucherIx(this.payer.publicKey, voucher.message, voucher.signature)
-        : undefined;
-      const settleAndSealIx = buildSettleAndSealInstruction(
-        this.payer.publicKey,
-        channel.channelPda,
-        Boolean(voucher),
-        this.programId
-      );
-      const tx = new Transaction();
-      if (ed) tx.add(ed);
-      tx.add(settleAndSealIx);
-      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
-        commitment: "confirmed",
-      });
-      console.log(`[SettleAndSeal] On-chain tx: ${signature}`);
-    } else {
-      console.log(
-        `[SettleAndSeal] ${channel.mode} path — claimed ${claimed.toFixed(4)} USDC, refunded ${refunded.toFixed(4)} USDC`
-      );
-    }
-
-    this.openChannels.delete(channelId);
-    return { claimed, refunded, signature };
-  }
-
-  async getVoucher(channelId: string): Promise<Voucher | undefined> {
-    return this.openChannels.get(channelId)?.lastVoucher;
-  }
-
-  async requestClose(channelId: string): Promise<string | undefined> {
-    const channel = this.openChannels.get(channelId);
-    if (!channel) throw new Error(`Channel ${channelId} not found`);
-    if (!(this.onchain && channel.mode === "onchain")) return undefined;
-
-    const ix = buildRequestCloseInstruction(
-      this.payer.publicKey,
-      channel.channelPda,
-      this.programId
-    );
-    const tx = new Transaction().add(ix);
-    return sendAndConfirmTransaction(this.connection, tx, [this.payer], {
-      commitment: "confirmed",
-    });
-  }
-
-  private async hasUsdc(
-    needed: bigint
-  ): Promise<{ ok: boolean; reason?: string; tokenProgram?: PublicKey }> {
-    try {
-      const mintInfo = await this.connection.getAccountInfo(this.usdcMint, "confirmed");
-      if (!mintInfo) return { ok: false, reason: "configured token mint does not exist" };
-      const tokenProgram = mintInfo.owner;
-      if (!tokenProgram.equals(TOKEN_PROGRAM_ID) && !tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
-        return { ok: false, reason: "configured mint is not owned by SPL Token or Token-2022" };
-      }
-      if (tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
-        const mint = await getMint(this.connection, this.usdcMint, "confirmed", tokenProgram);
-        const extensions = getExtensionTypes(mint.tlvData);
-        const unsupported = findUnsupportedChannelMintExtensions(extensions);
-        if (unsupported.length) {
-          return {
-            ok: false,
-            reason: `Token-2022 mint has extensions not accepted by Payment Channels: ${unsupported.join(", ")}`,
-          };
-        }
-      }
-      const ata = getAssociatedTokenAddressSync(
-        this.usdcMint,
-        this.payer.publicKey,
-        false,
-        tokenProgram
-      );
-      const acc = await getAccount(this.connection, ata, "confirmed", tokenProgram);
-      if (acc.amount < needed) {
-        return {
-          ok: false,
-          reason: `token ATA has ${Number(acc.amount) / 1e6}, need ${Number(needed) / 1e6}`,
-        };
-      }
-      const sol = await this.connection.getBalance(this.payer.publicKey);
-      if (sol < 50_000) {
-        return { ok: false, reason: `payer has only ${sol} lamports for fees`, tokenProgram };
-      }
-      return { ok: true, tokenProgram };
-    } catch (error) {
-      return {
-        ok: false,
-        reason: error instanceof Error ? error.message : "payer token account unavailable",
-      };
-    }
-  }
-
-  getChannelState(channelId: string) {
-    return this.openChannels.get(channelId);
-  }
-
-  getProgramId() {
-    return this.programId;
-  }
-
-  isOnchain() {
-    return this.onchain;
-  }
+ private connection:Connection;private payer:Keypair;private usdcMint:PublicKey;private programId:PublicKey;private onchain:boolean;private tokenProgram=TOKEN_PROGRAM_ID;private treasuryOwner?:PublicKey;
+ private openChannels=new Map<string,OpenedChannel>();private distributedChannels=new Map<string,OpenedChannel>();
+ constructor(c:ChannelConfig){this.connection=c.connection;this.payer=c.payer;this.usdcMint=c.usdcMint;this.programId=c.programId??PAYMENT_CHANNELS_PROGRAM_ID;this.onchain=Boolean(c.onchain);if(this.onchain&&!isOnchainMode())throw new Error("onchain_mode_not_authorized_by_wallet_safety_gates");const t=c.treasuryOwner??process.env.PAYMENT_CHANNELS_TREASURY_OWNER;if(t)this.treasuryOwner=new PublicKey(t);}
+ deriveChannelPda(payee:PublicKey,salt:bigint,slot:number,signer:PublicKey=this.payer.publicKey):[PublicKey,number]{const s=Buffer.alloc(8),o=Buffer.alloc(8);s.writeBigUInt64LE(salt);o.writeBigUInt64LE(BigInt(slot));return PublicKey.findProgramAddressSync([CHANNEL_SEED,this.payer.publicKey.toBuffer(),payee.toBuffer(),this.usdcMint.toBuffer(),signer.toBuffer(),s,o],this.programId);}
+ async openChannel(p:OpenChannelParams):Promise<string>{if(!Number.isFinite(p.ceilingUsdc)||p.ceilingUsdc<=0)throw new Error("channel_ceiling_must_be_positive");const recipients=p.recipients??[];validateRecipients(recipients);const salt=p.salt??BigInt(Date.now()),slot=await this.connection.getSlot("confirmed"),[channelPda]=this.deriveChannelPda(p.counterparty,salt,slot);if(recipients.some(x=>x.recipient.equals(channelPda)))throw new Error("distribution_recipient_cannot_be_channel_pda");const id=channelPda.toBase58(),ceiling=BigInt(Math.round(p.ceilingUsdc*1e6));let signature:string|undefined,mode:"sim"|"onchain"="sim";
+ if(this.onchain){if(!this.treasuryOwner)throw new Error("PAYMENT_CHANNELS_TREASURY_OWNER_required_for_onchain_distribution");this.tokenProgram=await this.resolveTokenProgram();const pre=await this.hasFunds(ceiling);if(!pre.ok)throw new Error("onchain_preflight_failed: "+pre.reason);const ix=buildOpenInstruction({payer:this.payer.publicKey,rentPayer:this.payer.publicKey,payee:p.counterparty,mint:this.usdcMint,authorizedSigner:this.payer.publicKey,channel:channelPda,salt,deposit:ceiling,gracePeriod:p.gracePeriod??DEFAULT_GRACE_PERIOD,openSlot:BigInt(slot),recipients,programId:this.programId,tokenProgram:this.tokenProgram});signature=await sendAndConfirmTransaction(this.connection,new Transaction().add(ix),[this.payer],{commitment:"confirmed"});mode="onchain";}
+ this.openChannels.set(id,{ceiling,spent:0n,counterparty:p.counterparty,channelPda,salt,openSlot:slot,signature,mode,recipients});return id;}
+ createVoucherMessage(pda:PublicKey,amount:bigint,expiresAt=0n):Uint8Array{const m=new Uint8Array(50);m.set(VOUCHER_MAGIC);m.set(pda.toBytes(),2);new DataView(m.buffer).setBigUint64(34,amount,true);new DataView(m.buffer).setBigInt64(42,expiresAt,true);return m;}
+ async createVoucher(id:string,amountUsdc:number):Promise<Voucher>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");if(!Number.isFinite(amountUsdc)||amountUsdc<=0)throw new Error("voucher_amount_must_be_positive");const amount=BigInt(Math.round(amountUsdc*1e6)),total=c.spent+amount;if(total>c.ceiling)throw new Error("channel_ceiling_exceeded");const message=this.createVoucherMessage(c.channelPda,total),signature=nacl.sign.detached(message,this.payer.secretKey),v={channelId:id,channelPda:c.channelPda,cumulativeAmount:total,expiresAt:0n,message,signature,timestamp:Date.now()};c.spent=total;c.lastVoucher=v;return v;}
+ async settle(id:string):Promise<SettlementResult>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");const claimed=Number(c.spent)/1e6,refunded=Number(c.ceiling-c.spent)/1e6;if(this.onchain&&c.mode==="onchain"){if(!c.lastVoucher)throw new Error("no_voucher_to_settle");const ed=buildEd25519VoucherIx(this.payer.publicKey,c.lastVoucher.message,c.lastVoucher.signature);const signature=await sendAndConfirmTransaction(this.connection,new Transaction().add(ed,buildSettleInstruction(c.channelPda,this.programId)),[this.payer],{commitment:"confirmed"});return{claimed,refunded,signature,finalized:false};}this.openChannels.delete(id);return{claimed,refunded,finalized:true};}
+ async settleAndSeal(id:string,payeeSigner?:Keypair):Promise<SettlementResult>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");const claimed=Number(c.spent)/1e6,refunded=Number(c.ceiling-c.spent)/1e6;if(!(this.onchain&&c.mode==="onchain")){this.openChannels.delete(id);return{claimed,refunded,finalized:true};}if(!payeeSigner||!payeeSigner.publicKey.equals(c.counterparty))throw new Error("matching_payee_keypair_required_for_settle_and_seal");if(!this.treasuryOwner)throw new Error("PAYMENT_CHANNELS_TREASURY_OWNER_required_for_distribution");const tx=new Transaction();if(c.lastVoucher)tx.add(buildEd25519VoucherIx(this.payer.publicKey,c.lastVoucher.message,c.lastVoucher.signature));tx.add(buildSettleAndSealInstruction(payeeSigner.publicKey,c.channelPda,Boolean(c.lastVoucher),this.programId));const sealSignature=await sendAndConfirmTransaction(this.connection,tx,[this.payer,payeeSigner],{commitment:"confirmed"});const distributeSignature=await this.distribute(id);return{claimed,refunded,sealSignature,distributeSignature,signature:distributeSignature,finalized:true};}
+ async distribute(id:string):Promise<string>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");if(!this.onchain||c.mode!=="onchain")throw new Error("distribute_requires_onchain_channel");if(!this.treasuryOwner)throw new Error("PAYMENT_CHANNELS_TREASURY_OWNER_required_for_distribution");const owners=[this.payer.publicKey,c.counterparty,this.treasuryOwner,...c.recipients.map(x=>x.recipient)],tx=new Transaction(),seen=new Set<string>();for(const owner of owners){const ata=getAssociatedTokenAddressSync(this.usdcMint,owner,true,this.tokenProgram),k=ata.toBase58();if(seen.has(k))continue;seen.add(k);if(!await this.connection.getAccountInfo(ata,"confirmed"))tx.add(createAssociatedTokenAccountIdempotentInstruction(this.payer.publicKey,ata,owner,this.usdcMint,this.tokenProgram));}
+ tx.add(buildDistributeInstruction({channel:c.channelPda,payer:this.payer.publicKey,rentPayer:this.payer.publicKey,payee:c.counterparty,mint:this.usdcMint,tokenProgram:this.tokenProgram,treasuryOwner:this.treasuryOwner,recipients:c.recipients,programId:this.programId}));const sig=await sendAndConfirmTransaction(this.connection,tx,[this.payer],{commitment:"confirmed"});this.openChannels.delete(id);this.distributedChannels.set(id,c);return sig;}
+ async sealAfterGrace(id:string):Promise<string>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");if(!this.onchain||c.mode!=="onchain")throw new Error("seal_requires_onchain_channel");return sendAndConfirmTransaction(this.connection,new Transaction().add(buildSealInstruction(c.channelPda,this.programId)),[this.payer],{commitment:"confirmed"});}
+ async reclaim(id:string):Promise<string>{const c=this.distributedChannels.get(id);if(!c)throw new Error("distributed_channel_not_found");const slot=await this.connection.getSlot("confirmed");if(BigInt(slot)<=BigInt(c.openSlot)+BigInt(OPEN_SLOT_WINDOW))throw new Error("channel_reclaim_window_not_elapsed");const sig=await sendAndConfirmTransaction(this.connection,new Transaction().add(buildReclaimInstruction(c.channelPda,this.payer.publicKey,this.programId)),[this.payer],{commitment:"confirmed"});this.distributedChannels.delete(id);return sig;}
+ async requestClose(id:string):Promise<string|undefined>{const c=this.openChannels.get(id);if(!c)throw new Error("channel_not_found");if(!this.onchain||c.mode!=="onchain")return;return sendAndConfirmTransaction(this.connection,new Transaction().add(buildRequestCloseInstruction(this.payer.publicKey,c.channelPda,this.programId)),[this.payer],{commitment:"confirmed"});}
+ private async resolveTokenProgram():Promise<PublicKey>{const info=await this.connection.getAccountInfo(this.usdcMint,"confirmed");if(!info)throw new Error("payment_mint_not_found");if(info.data.length<45||info.data[44]!==6)throw new Error("payment_mint_must_have_6_decimals");if(info.owner.equals(TOKEN_PROGRAM_ID))return TOKEN_PROGRAM_ID;if(info.owner.equals(TOKEN_2022_PROGRAM_ID)){const bad=unsupportedToken2022MintExtensions(info.data);if(bad.length)throw new Error("payment_mint_has_extensions_not_supported_by_official_channel_program: "+bad.join(","));return TOKEN_2022_PROGRAM_ID;}throw new Error("unsupported_payment_mint_owner");}
+ private async hasFunds(n:bigint):Promise<{ok:boolean;reason?:string}>{try{const ata=getAssociatedTokenAddressSync(this.usdcMint,this.payer.publicKey,false,this.tokenProgram),a=await getAccount(this.connection,ata,"confirmed",this.tokenProgram);if(a.amount<n)return{ok:false,reason:"insufficient_payment_token_balance"};const sol=await this.connection.getBalance(this.payer.publicKey);if(sol<100000)return{ok:false,reason:"insufficient_SOL_for_fees_and_rent"};return{ok:true};}catch{return{ok:false,reason:"payer_payment_token_ATA_missing_or_invalid"};}}
+ async getVoucher(id:string):Promise<Voucher|undefined>{return this.openChannels.get(id)?.lastVoucher;}
+ getChannelState(id:string){return this.openChannels.get(id);}getDistributedChannelState(id:string){return this.distributedChannels.get(id);}getProgramId(){return this.programId;}isOnchain(){return this.onchain;}
 }

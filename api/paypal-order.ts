@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { PayPalClient, type PayPalOrder } from "../src/paypal/paypal-client.js";
+import { PayPalClient, type PayPalOrder, type PayPalOrderDetails } from "../src/paypal/paypal-client.js";
 import { PayPalOrderLedger, type PayPalOrderRecord } from "../src/paypal/order-ledger.js";
 
 const ORDER_ID_PATTERN = /^[A-Z0-9-]{8,64}$/i;
@@ -11,11 +11,12 @@ function getClientIp(req: VercelRequest): string {
   return (req.headers["x-real-ip"] as string | undefined) || first?.trim() || "unknown";
 }
 
-function captureId(order: PayPalOrder): string | undefined {
+function captureId(order: PayPalOrder | PayPalOrderDetails): string | undefined {
+  if (!("purchase_units" in order)) return undefined;
   return order.purchase_units?.flatMap((unit) => unit.payments?.captures || [])[0]?.id;
 }
 
-function buildRecord(order: PayPalOrder, amount: string, description: string, existing?: PayPalOrderRecord): PayPalOrderRecord {
+function buildRecord(order: PayPalOrder | PayPalOrderDetails, amount: string, description: string, existing?: PayPalOrderRecord): PayPalOrderRecord {
   const capture = captureId(order);
   return {
     orderId: order.id,

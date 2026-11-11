@@ -34,11 +34,13 @@ async function main() {
     console.log("\n(Use a PayPal sandbox personal account to approve)");
   }
 
-  console.log("\n[2] After approval, capture with:");
-  console.log(`   await paypal.captureOrder("${order.id}")`);
+  console.log("\n[2] After approval, verify status then capture with:");
+  console.log(`   const approved = await paypal.getOrder("${order.id}");`);
+  console.log(`   if (approved.status === "APPROVED") await paypal.captureOrder("${order.id}")`);
+  console.log("This demo creates an order only; it does not approve or capture funds.");
 
   console.log("\n═".repeat(55));
-  console.log("  Demo complete. Dual-rail ready: Solana channels + PayPal.");
+  console.log("  Demo complete. PayPal sandbox order created; no funds captured.");
   console.log("═".repeat(55));
 }
 

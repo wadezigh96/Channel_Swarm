@@ -1,17 +1,18 @@
 {
   "name": "channel-swarm-agent",
   "version": "0.4.1",
-  "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent + PayPal dual-rail",
+  "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent",
   "type": "module",
   "scripts": {
+    "cli": "tsx cli/channelswarm.ts",
+    "mcp": "tsx src/mcp/server.ts",
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
     "demo:equity": "tsx examples/equity-execution-demo.ts",
-    "demo:paypal": "tsx examples/paypal-swarm-demo.ts",
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/payments/voucher.test.ts src/payments/x402.test.ts src/payments/token-compatibility.test.ts src/payments/channel-manager.test.ts src/payments/rail-advisor.test.ts src/wallet.test.ts api/paypal-order.test.ts api/paypal-webhook.test.ts",
+    "test": "tsx --test src/wallet.test.ts src/payments/voucher.test.ts src/payments/x402.test.ts src/payments/replay-store.test.ts src/paypal/paypal-client.test.ts src/payments/instructions.test.ts src/ai/rail-advisor.test.ts src/paypal/payment-ledger.test.ts src/payments/replay-store.test.ts src/paypal/webhook-event.test.ts",
     "x402:demo": "tsx examples/x402-demo.ts"
   },
   "keywords": [
@@ -21,9 +22,7 @@
     "payment-channels",
     "ai-agent",
     "stocknized",
-    "a2a",
-    "paypal",
-    "pyusd"
+    "a2a"
   ],
   "author": "wadezigh96",
   "license": "MIT",

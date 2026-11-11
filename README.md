@@ -1,6 +1,6 @@
 # ⚡ ChannelSwarm
 
-> **Autonomous Agent Economy on Solana + PayPal**
+> **Autonomous Agent Economy on Solana**
 
 <div align="center">
 
@@ -20,7 +20,7 @@
 
 ## 🧠 What is ChannelSwarm?
 
-**ChannelSwarm** is a Solana-native prototype for agent-to-agent payments with dual-rail settlement (Solana + PayPal).
+**ChannelSwarm** is a Solana-native prototype for agent-to-agent services and payments. Solana stablecoin channels and PayPal fiat checkout are separate, explicitly selected rails.
 
 It combines:
 
@@ -30,9 +30,9 @@ It combines:
 - 💳 **x402-style payments** — HTTP payment-required flow using signed vouchers
 - 📈 **Stocknized Agent** — tokenized-equity strategy with **paper default** and **opt-in live execution** (Backpack RFQ or Jupiter xStock swaps)
 - 💵 **PYUSD support** — official PayPal USD mint on Solana (Token-2022)
-- 💳 **PayPal Orders** — dual-rail fiat settlement via PayPal Orders v2 API
+- 💳 **PayPal Orders** — separate fiat checkout via PayPal Orders v2 (create, inspect approval, capture; no automatic double charge)
 
-> **Honest status:** payment-channel wire format and demo lifecycle are implemented. Tokenized-equity **execution path** is complete (paper / backpack / jupiter) with local execution proofs; live fills require credentials and funded accounts. Local demo persistence is available via an optional file-based store (`data/` directory); production PayPal orders require Upstash Redis. The default mode is simulation.
+> **Honest status:** official channel lifecycle builders, a verified PayPal webhook route, a durable KV order/event ledger, and an advisory AI Gateway rail recommender are implemented in the PR branch. This is code-level readiness, not proof of a funded mainnet or PayPal Live end-to-end run. Mainnet transactions and PayPal Live capture remain independently locked.
 
 ---
 
@@ -46,9 +46,10 @@ It combines:
 | **x402-style HTTP** | Returns `402 Payment Required` and verifies signed payments |
 | **Reputation** | Gates participation using agent reputation |
 | **Stocknized** | Pyth (or paper) quotes + `EXECUTION_MODE=paper\|backpack\|jupiter` |
-| **PYUSD** | Official PayPal USD (mainnet + devnet mints) |
-| **PayPal Orders** | Dual-rail fiat settlement |
-| **Dashboard** | Dark, agent-first web dashboard with live PayPal button |
+| **PYUSD** | Official mint identification; rejected for channel use when active Token-2022 extensions are outside the deployed program allowlist |
+| **PayPal Orders** | Separate checkout; authenticated create/capture routes, verified webhook, persistent KV ledger, and independent Live capture gate |
+| **AI Gateway** | Payment-rail recommendation only; human approval is required and the model cannot execute payments |
+| **Dashboard** | Demo snapshot plus 15-second RPC/configuration health checks; not live payment telemetry |
 
 ---
 
@@ -79,8 +80,8 @@ flowchart TB
         PROOF --> O
     end
 
-    SOL["Solana wallet / funded payer"] -.->|SOL + USDC/PYUSD| PC
-    PAYPAL["PayPal Orders v2"] -.->|fiat rail| O
+    SOL["Solana wallet / funded payer"] -.->|SOL + supported SPL token| PC
+    PAYPAL["PayPal checkout (separate intent)"] -.->|selected fiat rail, never auto-combined| O
     USER["Operator"] -.->|simulation or ONCHAIN=true| O
 ```
 
@@ -94,7 +95,7 @@ flowchart TB
 | **Payment Channels** | Solana on-chain settlement primitive |
 | **x402-style HTTP** | Payment-required resource flow using signed vouchers |
 | **Stocknized Agent** | Strategy + unified execution path + proofs |
-| **PayPal Client** | Dual-rail Orders v2 settlement |
+| **PayPal Client** | Separate Orders v2 checkout; optional webhook-signature verification |
 
 ## 💸 Payment Channel
 
@@ -118,17 +119,14 @@ Each voucher is authenticated with **Ed25519**.
 
 ### PYUSD (PayPal USD)
 
-Official PYUSD mints (Token-2022, 6 decimals):
+Official PYUSD mint addresses (Token-2022, 6 decimals; address selection only):
 
 | Network | Mint |
 |---------|------|
 | Mainnet | `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` |
 | Devnet  | `CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM` |
 
-Enable with:
-```bash
-USE_PYUSD=true npm run demo
-```
+The deployed Payment Channels program has a documented Token-2022 extension allowlist. PYUSD has active extensions outside that allowlist (including PermanentDelegate), so ChannelSwarm rejects it for channel escrow. The mainnet channel candidate is classic SPL USDC; PYUSD remains identified but is not enabled for this channel path.
 
 ---
 
@@ -153,6 +151,10 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 
 ---
 
+## 🎯 Solana Request for Startups alignment
+
+ChannelSwarm is aligned primarily with **Build the Future of Stablecoins** (agent-to-agent stablecoin payments and merchant settlement) and secondarily with **Open Marketplace for AI Inference** (a future service-provider marketplace paid through the same agent payment primitives). The repository currently implements a prototype swarm and payment primitives; it does not yet claim a production inference marketplace, durable provider discovery, or production settlement reconciliation. See the [Solana Request for Startups](https://solana.com/request-for-startups.md).
+
 ## 🤖 Agent Roster
 
 | Agent | Role | Current mode |
@@ -169,9 +171,12 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 |---|:---:|
 | 50-byte voucher + Ed25519 | ✅ |
 | Deterministic channel PDA | ✅ |
-| `open` instruction builder (SPL Token + Token-2022 ATA derivation) | ✅ |
+| `open` instruction builder | ✅ |
 | `settle` instruction builder | ✅ |
-| `settleAndSeal` instruction builder | ✅ |
+| `settleAndSeal` instruction builder (payee signature) | ✅ |
+| `distribute` instruction builder + recipient splits | ✅ |
+| `seal` forced-close instruction builder | ✅ |
+| `reclaim` instruction builder | ✅ |
 | `requestClose` path | ✅ |
 | Agent swarm demo | ✅ |
 | Reputation gating | ✅ |
@@ -179,13 +184,12 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 | Automated tests | ✅ |
 | TypeScript build | ✅ |
 | Tokenized-equity execution path (paper / backpack / jupiter + proofs) | ✅ |
-| Local demo persistence for reputation / portfolio | ✅ optional file store |
-| PYUSD mint identification and Token-2022 extension preflight | ✅ code + tests; funded mainnet test pending |
-| PayPal Orders v2 create / lookup / approval-gated capture | ✅ code + mocked tests; sandbox E2E pending |
-| PayPal webhook signature verification, deduplication, and partial-refund reconciliation | ✅ code + mocked tests; webhook registration/E2E pending |
-| Durable order ledger and API rate limits | ✅ Upstash adapter; production credentials required |
-| Rail advisor | ✅ rules fallback; optional AI Gateway needs configuration/model test |
-| Funded mainnet lifecycle | Not executed; requires operator approval and funded wallet |
+| PayPal order/event ledger (Vercel KV / Upstash REST) | ⚠️ Code + tests; production credentials required |
+| PYUSD mint identification | ✅ |
+| PYUSD Token-2022 Payment Channels compatibility | ✅ Preflight verified; unsupported active extensions fail closed |
+| PayPal Orders v2 create/get/capture + webhook endpoint + persistent ledger | ⚠️ Code + tests; sandbox credentials, webhook and KV required |
+| AI Gateway rail advisor | ✅ Rules fallback verified; AI Gateway is optional |
+| Funded Mainnet lifecycle | ⚠️ Simulation verified; funded mainnet requires explicit approval and operational validation |
 
 ---
 
@@ -195,52 +199,48 @@ EXECUTION_MODE=jupiter USDC_MINT=... XSTOCK_AAPL_MINT=... npm run demo:equity
 git clone https://github.com/wadezigh96/Channel_Swarm.git
 cd Channel_Swarm
 npm install
-cp .env.example .env
-# Fill PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, and optionally SOLANA_PRIVATE_KEY
 
 npm test
 npm run demo
-npm run demo:paypal
 npm run demo:equity
 ```
 
 For an on-chain payment-channel attempt:
 
 ```bash
-# Fund the payer with SOL + USDC or PYUSD first.
-ONCHAIN=true USE_PYUSD=true npm run demo
+# Fund the payer with SOL + the required devnet USDC first.
+NETWORK=devnet ONCHAIN=true npm run demo
 ```
 
-The default is simulation, so `npm run demo` needs no private key and sends no on-chain transaction. Only set `ONCHAIN=true` after checking the RPC, payer, mint, token extensions, balance, and fee budget. An explicit on-chain run requires a valid payer key, and any failed preflight stops the run rather than silently recording a simulated channel.
+With PYUSD:
+```bash
+USE_PYUSD=false NETWORK=devnet npm run demo
+```
+
+The default is simulation. If devnet on-chain mode is explicitly requested, missing mint/ATA/balance preflight now fails closed instead of silently pretending to settle.
+
+### CLI and MCP integration
+
+The repository includes a CLI for read-only PYUSD inspection, Solana preflight, simulation-first channel operations, and PayPal sandbox operations:
+
+```bash
+npm run cli -- pyusd info
+npm run cli -- pyusd preflight
+npm run cli -- paypal create --amount 5 --description "Agent settlement"
+npm run cli -- paypal get --order-id ORDER_ID
+npm run cli -- paypal capture --order-id ORDER_ID --confirm CAPTURE
+npm run cli -- pyusd open --payee RECIPIENT_WALLET --amount 1
+```
+
+`npm run mcp` starts a newline-delimited MCP stdio server exposing PYUSD metadata, Solana preflight, and PayPal create/get/capture tools. Capture requires `confirm: "CAPTURE"`; on-chain execution remains behind the PR's independent transaction gates. PayPal Orders and PYUSD on Solana are separate settlement rails and are never silently converted into one another. See the [MCP PayPal Quickstart](docs/MCP_QUICKSTART.md) for client configuration, environment variables, smoke tests, and the approval-gated order flow.
 
 ---
 
-## 🖥️ Live Dashboard (Dual-Rail)
+## 🖥️ Dashboard
 
-**https://swarm-agent-beta.vercel.app/**
+The checked-in dashboard metrics remain static demo snapshots. A separate health panel polls `/api/status` every 15 seconds for RPC reachability and configuration readiness only; it does not show live balances, payments or settlement history.
 
-The updated dashboard source includes a **Create PayPal Order** button that calls the serverless endpoint below. The public deployment will not show this updated flow until these changes are pushed and Vercel redeploys:
-
-```
-POST /api/paypal-order
-```
-
-Set these environment variables in Vercel (Project Settings → Environment Variables):
-
-- `PAYPAL_CLIENT_ID`
-- `PAYPAL_CLIENT_SECRET`
-- `PAYPAL_MODE=sandbox`
-
-After deployment, the create button writes a durable order record, opens the PayPal sandbox approval page, and captures only after PayPal returns an approved order. The order amount is checked again before capture. The API requires Upstash storage for the ledger and rate limits.
-
-Configure these additional Vercel environment variables before enabling the PayPal flow:
-
-- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` for durable orders, webhook deduplication, and rate limits.
-- `PAYPAL_WEBHOOK_ID` after registering `https://<your-domain>/api/paypal-webhook` in the PayPal developer dashboard. Subscribe to `CHECKOUT.ORDER.APPROVED`, `CHECKOUT.ORDER.COMPLETED`, and relevant `PAYMENT.CAPTURE.*` events.
-- `APP_URL=https://<your-domain>` so PayPal redirects back to your deployment.
-- Optional `AI_GATEWAY_BASE_URL`, `AI_GATEWAY_API_KEY`, and `AI_GATEWAY_MODEL` for the advisor. Without these, deterministic rules are used. The advisor only recommends a rail; it cannot send a payment.
-
-Keep `PAYPAL_MODE=sandbox`, `PAYPAL_ALLOW_LIVE=false`, and `PAYPAL_AUTO_ORDER=false` until sandbox end-to-end validation is complete. The swarm demo does not automatically create PayPal orders unless `PAYPAL_AUTO_ORDER=true`. Mainnet transactions are also opt-in with `ONCHAIN=true`; never add private keys to the repository or browser bundle.
+The current production dashboard URL is still attached to the unchanged `main` deployment. The updated feature branch is available as a Vercel Preview through PR #1; do not treat the old production URL as proof that these branch changes are live.
 
 ---
 
@@ -252,11 +252,10 @@ src/
 │   ├── channel-manager.ts
 │   ├── instructions.ts
 │   ├── pyusd.ts
+│   ├── paypal-client.ts
 │   ├── voucher.test.ts
 │   ├── x402-server.ts
 │   └── x402.test.ts
-├── paypal/
-│   └── paypal-client.ts
 ├── swarm/
 │   └── orchestrator.ts
 ├── stock/
@@ -280,11 +279,8 @@ examples/
 ├── x402-demo.ts
 └── paypal-swarm-demo.ts
 
-api/
-└── paypal-order.ts          ← serverless endpoint
-
 docs/
-└── index.html               ← live dashboard
+└── index.html
 ```
 
 ---
@@ -293,12 +289,11 @@ docs/
 
 - **Stocknized:** default is paper with local execution proofs. Live `backpack` / `jupiter` modes are opt-in and need credentials + funded accounts.
 - **x402:** local x402-style transport, not a claim of full production x402 compatibility.
-- **Persistence:** local reputation and portfolio data use an optional file store. The PayPal order ledger uses Upstash REST in Vercel and is disabled until configured.
-- **On-chain payment channels:** opt-in with `ONCHAIN=true`; requires a funded payer and a token mint accepted by the program.
+- **Persistence:** optional file-based persistence (reputation + stock portfolio) in `data/`. Default on for simulation.
+- **On-chain payment channels:** opt-in and requires a funded payer.
 - **Default demo:** simulation-first to avoid sending doomed transactions.
-- **PYUSD:** the client detects Token-2022 and checks mint extensions against the deployed program's allowlist before opening. A funded mainnet transaction has not been run; unsupported extensions fail closed to simulation.
-- **PayPal:** sandbox Orders v2 create, lookup, capture, webhook signature verification, and ledger code are implemented. A registered sandbox webhook, Upstash, PayPal credentials, and end-to-end validation are still required for the deployed flow.
-- **Rail advisor:** deterministic rules work without keys. AI Gateway mode requires a server-side base URL, key, model, and a separate model connectivity test.
+- **PYUSD:** official mints supported; on-chain usage requires Token-2022 compatible channel program.
+- **PayPal:** sandbox Orders v2 for dual-rail settlement.
 
 ---
 
@@ -308,8 +303,6 @@ docs/
 - [Live Dashboard](https://swarm-agent-beta.vercel.app/)
 - [GitHub Actions](https://github.com/wadezigh96/Channel_Swarm/actions)
 - [Submission](SUBMISSION.md)
-- [Go-live checklist](GO_LIVE_CHECKLIST.md)
-- [Integration references](docs/INTEGRATION_REFERENCES.md)
 - [Solana Payment Channels](https://github.com/solana-foundation/payment-channels)
 - [Program Explorer](https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX)
 - [PYUSD on Solana](https://solana.com/pyusd)
@@ -320,3 +313,17 @@ docs/
 ## 📄 License
 
 MIT · Built for PayPal AI Hackathon 2026 + Solana
+
+
+## Mainnet and PayPal Live readiness
+
+- Mainnet stays disabled by default. On-chain mode additionally requires `ONCHAIN=true`, `ALLOW_MAINNET_TRANSACTIONS=true`, and `MAINNET_TX_APPROVED=true`; these are not enabled by the example configuration.
+- The channel candidate is classic SPL USDC (6 decimals). PYUSD is not enabled for Payment Channels because its active Token-2022 extensions are not all accepted by the deployed program.
+- The channel lifecycle includes `open`, voucher signing, `settle`, payee-signed `settleAndSeal`, `distribute`, forced-close `requestClose`/`seal`, and delayed `reclaim`.
+- PayPal routes: `POST /api/paypal/create-order`, `GET /api/paypal/return`, `POST /api/paypal/capture`, and `POST /api/paypal/webhook`. Checkout/capture routes require `CHANNELSWARM_API_TOKEN`; durable KV credentials are required. Webhooks never auto-capture.
+- PayPal Live order creation requires `PAYPAL_LIVE_ENABLED=true`, public HTTPS return/cancel URLs and a registered webhook. Real capture separately requires `PAYPAL_LIVE_CAPTURE_ENABLED=true` and remains off by default.
+- AI rail advice uses Vercel AI Gateway via `AI_GATEWAY_API_KEY` (or Vercel OIDC token in the function request) and `AI_GATEWAY_MODEL`. It is advisory only and cannot sign, create, or capture payments.
+- `/api/status` reports RPC/configuration health only. The x402 cumulative-voucher replay watermark uses atomic KV storage. Vercel fails closed when KV is missing; the local in-memory fallback is for developer demos only.
+- `ChannelManager` now checks `isOnchainMode()` itself, so callers cannot bypass the wallet environment gates by passing `onchain: true` directly.
+- `.env.example` defaults to devnet USDC; use the documented mainnet USDC mint only when deliberately switching the network configuration.
+- No Mainnet transaction, real PayPal capture, or Production deployment is performed by this preparation work.

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { PayPalClient, type PayPalWebhookHeaders } from "../src/paypal/paypal-client.js";
+import { PayPalClient } from "../src/paypal/paypal-client.js";
 import { PayPalOrderLedger } from "../src/paypal/order-ledger.js";
 
 type PayPalWebhookEvent = {
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!event || typeof event !== "object" || !event.id || !event.event_type) {
     return res.status(400).json({ error: "Invalid PayPal webhook payload." });
   }
-  const webhookHeaders: PayPalWebhookHeaders = {
+  const webhookHeaders = {
     auth_algo: header(req, "paypal-auth-algo"),
     cert_url: header(req, "paypal-cert-url"),
     transmission_id: header(req, "paypal-transmission-id"),
