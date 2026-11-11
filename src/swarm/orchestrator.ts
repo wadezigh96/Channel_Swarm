@@ -2,7 +2,7 @@
  * Swarm orchestrator. AI advice never executes a payment; payment rails are explicitly selected.
  */
 import { Connection,Keypair,PublicKey } from "@solana/web3.js";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { ChannelManager } from "../payments/channel-manager.js";
 import { StocknizedAgent } from "../stock/stocknized-agent.js";
 import { ReputationRegistry } from "../reputation/reputation.js";
@@ -58,15 +58,24 @@ export class SwarmOrchestrator {
   const record=await this.paymentLedger.get(orderId);
   if(!record)throw new Error("paypal_order_not_in_durable_ledger");
   if(record.status==="COMPLETED")throw new Error("paypal_order_already_completed");
-  const order=await this.paypal.getOrder(orderId);
-  if(order.status!=="APPROVED")throw new Error("paypal_order_not_approved: "+order.status);
-  const unit=order.purchase_units?.[0];
-  if(!unit||unit.amount?.currency_code!=="USD"||unit.amount.value!==record.amountUsd||unit.custom_id!==record.requestId)throw new Error("paypal_order_does_not_match_persisted_payment_intent");
-  await this.paymentLedger.save({...record,status:"APPROVED",updatedAt:new Date().toISOString()});
-  const captured=await this.paypal.captureOrder(orderId,requestId);
-  const capture=captured.purchase_units?.flatMap(u=>u.payments?.captures??[]).find(c=>c.status==="COMPLETED");
-  await this.paymentLedger.save({...record,status:capture?"COMPLETED":"PENDING",updatedAt:new Date().toISOString()});
-  return captured;
+  if(!record.requestId)throw new Error("paypal_order_capture_reference_missing");
+  if(requestId&&requestId!==record.requestId)throw new Error("paypal_capture_request_reference_mismatch");
+  const lockToken=randomUUID();
+  if(!await this.paymentLedger.claimCapture(orderId,lockToken))throw new Error("paypal_capture_already_in_progress");
+  try{
+   const order=await this.paypal.getOrder(orderId);
+   if(order.status!=="APPROVED")throw new Error("paypal_order_not_approved: "+order.status);
+   const unit=order.purchase_units?.[0];
+   if(!unit||unit.amount?.currency_code!=="USD"||unit.amount.value!==record.amountUsd||unit.custom_id!==record.requestId)throw new Error("paypal_order_does_not_match_persisted_payment_intent");
+   await this.paymentLedger.save({...record,status:"APPROVED",updatedAt:new Date().toISOString()});
+   const stableCaptureRequestId=createHash("sha256").update("channelswarm:capture:"+record.requestId).digest("hex").slice(0,36);
+   const captured=await this.paypal.captureOrder(orderId,stableCaptureRequestId);
+   const capture=captured.purchase_units?.flatMap(u=>u.payments?.captures??[]).find(c=>c.status==="COMPLETED");
+   await this.paymentLedger.save({...record,status:capture?"COMPLETED":"PENDING",updatedAt:new Date().toISOString()});
+   return captured;
+  }finally{
+   await this.paymentLedger.releaseCapture(orderId,lockToken);
+  }
  }
  /** Model suggestion only; the caller must choose and approve the payment rail. */
  async recommendPaymentRail(input:{task:string;amountUsd:number;solanaAvailable:boolean;paypalAvailable:boolean}):Promise<RailAdvice>{return advisePaymentRail(input);}
