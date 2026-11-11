@@ -52,7 +52,11 @@ export class PayPalLedger {
  }
  async save(record:PayPalLedgerRecord):Promise<void>{
   const result=await this.command<number>("EVAL",SAVE_SCRIPT,"1","channelswarm:paypal:order:"+record.orderId,String(STATUS_RANK[record.status]),JSON.stringify(record));
-  if(Number(result)!==1)throw new Error("paypal_ledger_status_regression_rejected");
+  if(Number(result)!==1){
+   const current=await this.get(record.orderId);
+   if(current&&STATUS_RANK[current.status]>=STATUS_RANK[record.status])return;
+   throw new Error("paypal_ledger_status_regression_rejected");
+  }
  }
  async claimCapture(orderId:string,token:string,ttlSeconds=300):Promise<boolean>{
   if(!orderId||!token||!Number.isInteger(ttlSeconds)||ttlSeconds<30)throw new Error("invalid_paypal_capture_lock");
