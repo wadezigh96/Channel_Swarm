@@ -57,7 +57,7 @@ npx tsx examples/paypal-swarm-demo.ts
 ### Submission notes
 - **Target track:** Best Use of Agentic Commerce / Agentic Payments
 - **Payment rails:** choose Solana Payment Channels OR PayPal Orders checkout per intent; PYUSD Token-2022 channel execution remains blocked pending compatibility verification
-- **Demo status:** devnet USDC simulation-first by default; Mainnet transaction gates are independent and disabled; PayPal create/return/capture/webhook routes and durable KV ledger are implemented but require PayPal webhook registration and KV credentials; AI rail advice requires an AI Gateway key or configured Vercel OIDC; PYUSD with unsupported Token-2022 extensions is rejected; dashboard health checks are not payment telemetry
+- **Demo status:** devnet USDC simulation-first by default; Mainnet transaction gates are independent and disabled; PayPal create/return/capture/webhook routes and durable KV ledger are implemented but require PayPal webhook registration and KV credentials; AI rail advice requires an AI Gateway key or configured Vercel OIDC; PYUSD with unsupported Token-2022 extensions is rejected; dashboard health checks are not payment telemetry; x402 replay protection uses atomic KV storage and fails closed on Vercel without KV
 - **Honesty:** live tokenized-equity fills require credentials + funded accounts; paper mode always works. Dashboard metrics remain static demo snapshots with separate RPC/configuration health checks. No Mainnet transaction, real PayPal capture or Production deployment is part of this preparation
 
 ### Team

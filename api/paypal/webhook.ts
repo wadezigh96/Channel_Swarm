@@ -1,5 +1,6 @@
 import { PayPalClient } from "../../src/paypal/paypal-client.js";
 import { PayPalLedger, type LedgerStatus } from "../../src/paypal/payment-ledger.js";
+import { extractPayPalOrderId } from "../../src/paypal/webhook-event.js";
 export default async function handler(req:any,res:any){
  if(req.method!=="POST"){res.setHeader("Allow","POST");return res.status(405).json({error:"method_not_allowed"});}
  try{
@@ -7,8 +8,8 @@ export default async function handler(req:any,res:any){
   const verified=await client.verifyWebhook({transmissionId:h["paypal-transmission-id"],transmissionTime:h["paypal-transmission-time"],certUrl:h["paypal-cert-url"],authAlgo:h["paypal-auth-algo"],transmissionSig:h["paypal-transmission-sig"]},body);
   if(!verified)return res.status(401).json({error:"invalid_webhook_signature"});
   const eventId=String(body.id??""),eventType=String(body.event_type??""),resource=body.resource??{};
-  // Capture/refund resource.id is the capture ID; related_ids.order_id is the order ID.
-  const orderId=String(resource.supplementary_data?.related_ids?.order_id??resource.id??"");
+  // Capture resource.id is a capture ID, never use it as the owning order ID.
+  const orderId=extractPayPalOrderId(eventType,resource);
   const status:LedgerStatus=eventType==="CHECKOUT.ORDER.APPROVED"?"APPROVED":eventType==="PAYMENT.CAPTURE.COMPLETED"?"COMPLETED":eventType==="PAYMENT.CAPTURE.PENDING"?"PENDING":eventType==="PAYMENT.CAPTURE.DENIED"?"DENIED":(eventType==="CHECKOUT.PAYMENT-APPROVAL.REVERSED"||eventType==="PAYMENT.CAPTURE.REVERSED"||eventType==="PAYMENT.CAPTURE.REFUNDED")?"REVERSED":"UNKNOWN";
   if(!eventId||!orderId)return res.status(202).json({received:true,recorded:false,reason:"event_not_order_scoped"});
   const ledger=new PayPalLedger(),result=await ledger.recordWebhook(eventId,eventType,orderId,status);

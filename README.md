@@ -308,7 +308,7 @@ MIT · Built for PayPal AI Hackathon 2026 + Solana
 - PayPal routes: `POST /api/paypal/create-order`, `GET /api/paypal/return`, `POST /api/paypal/capture`, and `POST /api/paypal/webhook`. Checkout/capture routes require `CHANNELSWARM_API_TOKEN`; durable KV credentials are required. Webhooks never auto-capture.
 - PayPal Live order creation requires `PAYPAL_LIVE_ENABLED=true`, public HTTPS return/cancel URLs and a registered webhook. Real capture separately requires `PAYPAL_LIVE_CAPTURE_ENABLED=true` and remains off by default.
 - AI rail advice uses Vercel AI Gateway via `AI_GATEWAY_API_KEY` (or Vercel OIDC token in the function request) and `AI_GATEWAY_MODEL`. It is advisory only and cannot sign, create, or capture payments.
-- `/api/status` reports RPC/configuration health only. The x402 replay watermark remains in-memory in this demo server and must be moved to durable storage before production.
+- `/api/status` reports RPC/configuration health only. The x402 cumulative-voucher replay watermark uses atomic KV storage. Vercel fails closed when KV is missing; the local in-memory fallback is for developer demos only.
 - `ChannelManager` now checks `isOnchainMode()` itself, so callers cannot bypass the wallet environment gates by passing `onchain: true` directly.
 - `.env.example` defaults to devnet USDC; use the documented mainnet USDC mint only when deliberately switching the network configuration.
 - No Mainnet transaction, real PayPal capture, or Production deployment is performed by this preparation work.

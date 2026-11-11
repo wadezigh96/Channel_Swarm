@@ -14,7 +14,8 @@ export default async function handler(_req:any,res:any){
   paypalWebhookConfigured:Boolean(process.env.PAYPAL_WEBHOOK_ID),
   paypalLiveCaptureGate:paypalMode==="live"&&process.env.PAYPAL_LIVE_ENABLED==="true"&&process.env.PAYPAL_LIVE_CAPTURE_ENABLED==="true",
   durableLedgerConfigured:Boolean(process.env.KV_REST_API_URL&&process.env.KV_REST_API_TOKEN),
+  x402ReplayProtectionConfigured:Boolean(process.env.KV_REST_API_URL&&process.env.KV_REST_API_TOKEN),
   aiAdvisorConfigured:Boolean(process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||process.env.VERCEL==="1"),
-  note:"Health/configuration only. This endpoint does not submit transactions or capture payments."
+  note:"Health/configuration only. x402 requires durable KV in Vercel. This endpoint does not submit transactions or capture payments."
  });
 }
