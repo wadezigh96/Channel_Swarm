@@ -26,7 +26,7 @@ export default async function handler(req:any,res:any){
    await ledger.save({...record,status:captureResult?"COMPLETED":"PENDING",updatedAt:new Date().toISOString()});
    return res.status(200).json({id:orderId,status:result.status,captureId:captureResult?.id??null,mode:paypal.mode});
   }finally{
-   await ledger.releaseCapture(orderId,lockToken);
+   try{await ledger.releaseCapture(orderId,lockToken);}catch{/* Lease expires automatically; do not mask PayPal result. */}
   }
  }catch(e){return res.status(400).json({error:e instanceof Error?e.message:"paypal_capture_failed"});}
 }
