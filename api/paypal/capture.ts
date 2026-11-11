@@ -20,7 +20,7 @@ export default async function handler(req:any,res:any){
    const unit=order.purchase_units?.[0];
    if(!unit||unit.amount?.currency_code!=="USD"||unit.amount.value!==record.amountUsd||unit.custom_id!==record.requestId)return res.status(409).json({error:"paypal_order_does_not_match_persisted_payment_intent"});
    await ledger.save({...record,status:"APPROVED",updatedAt:new Date().toISOString()});
-   const stableCaptureRequestId=createHash("sha256").update("channelswarm:capture:"+record.requestId).digest("hex").slice(0,36);
+   const stableCaptureRequestId=createHash("sha256").update("channelswarm:capture:"+record.requestId).digest("hex").slice(0,38);
    const result=await paypal.captureOrder(orderId,stableCaptureRequestId);
    const captureResult=result.purchase_units?.flatMap(u=>u.payments?.captures??[]).find(c=>c.status==="COMPLETED");
    await ledger.save({...record,status:captureResult?"COMPLETED":"PENDING",updatedAt:new Date().toISOString()});

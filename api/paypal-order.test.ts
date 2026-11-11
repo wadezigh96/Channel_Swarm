@@ -153,7 +153,7 @@ test("PayPal order creation stores the order and capture requires an approved ma
     const capturedBody = captured.result.payload as { order: { status: string; captureId: string } };
     assert.equal(capturedBody.order.status, "COMPLETED");
     assert.equal(capturedBody.order.captureId, "CAPTURE-0001");
-    assert.equal(captureRequestId.length, 38);
+    assert.equal(captureRequestId.length, 36);
     assert.equal(paypalCalls.filter((url) => url.endsWith(`/v2/checkout/orders/${TEST_ORDER_ID}/capture`)).length, 1);
   } finally {
     globalThis.fetch = previousFetch;

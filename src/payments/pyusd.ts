@@ -22,17 +22,30 @@ export const PYUSD_MINT_DEVNET = new PublicKey(
   "CXk2AMBfi3TwaEL2468s6zP8xq9NxTXjp9gjMgzeUynM"
 );
 
+export type PyusdNetwork = "devnet" | "mainnet";
+
+/** Resolve the canonical PYUSD network. Mainnet must be selected explicitly. */
+export function getPyusdNetwork(): PyusdNetwork {
+  const network = (process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet").toLowerCase();
+  if (network === "devnet") return "devnet";
+  if (network === "mainnet" || network === "mainnet-beta") return "mainnet";
+  throw new Error(`Unsupported PYUSD_NETWORK: ${network}`);
+}
+
+/** Resolve the RPC endpoint for the selected PYUSD network. */
+export function getPyusdRpcUrl(): string {
+  if (process.env.SOLANA_RPC_URL) return process.env.SOLANA_RPC_URL;
+  return getPyusdNetwork() === "mainnet"
+    ? "https://api.mainnet-beta.solana.com"
+    : "https://api.devnet.solana.com";
+}
+
 /**
  * Resolve PYUSD mint based on environment.
  * Defaults to devnet. Mainnet must be selected explicitly.
  */
 export function getPyusdMint(): PublicKey {
-  const network = (process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet").toLowerCase();
-  if (network === "devnet") {
-    return PYUSD_MINT_DEVNET;
-  }
-  if (network === "mainnet" || network === "mainnet-beta") return PYUSD_MINT_MAINNET;
-  throw new Error(`Unsupported PYUSD_NETWORK: ${network}`);
+  return getPyusdNetwork() === "mainnet" ? PYUSD_MINT_MAINNET : PYUSD_MINT_DEVNET;
 }
 
 /** Human-readable info */

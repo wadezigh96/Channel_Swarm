@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { ChannelManager } from "../src/payments/channel-manager.js";
-import { getPyusdMint, PYUSD_INFO } from "../src/payments/pyusd.js";
+import { getPyusdMint, getPyusdNetwork, getPyusdRpcUrl, PYUSD_INFO } from "../src/payments/pyusd.js";
 import { PayPalClient } from "../src/paypal/paypal-client.js";
 import { loadPayerFromEnv } from "../src/wallet.js";
 import { findUnsupportedChannelMintExtensions } from "../src/payments/token-compatibility.js";
@@ -71,7 +71,7 @@ async function pyusdPreflight(rpcUrl: string) {
   const extensions = getExtensionTypes(mint.tlvData);
   const unsupported = findUnsupportedChannelMintExtensions(extensions);
   return {
-    network: (process.env.PYUSD_NETWORK || process.env.NETWORK || "mainnet").toLowerCase(),
+    network: getPyusdNetwork(),
     rpcUrl,
     mint: mintAddress.toBase58(),
     owner: account.owner.toBase58(),
@@ -91,12 +91,12 @@ async function main(): Promise<void> {
   }
 
   if (group === "pyusd" && action === "info") {
-    json({ ...PYUSD_INFO, network: (process.env.PYUSD_NETWORK || process.env.NETWORK || "mainnet").toLowerCase() });
+    json({ ...PYUSD_INFO, network: getPyusdNetwork() });
     return;
   }
 
   if (group === "pyusd" && action === "preflight") {
-    const rpc = typeof args.rpc === "string" ? args.rpc : process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    const rpc = typeof args.rpc === "string" ? args.rpc : getPyusdRpcUrl();
     json(await pyusdPreflight(rpc));
     return;
   }
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
     if (onchain) process.env.ONCHAIN = "true";
     const payer = loadPayerFromEnv();
     if (!payer) throw new Error("SOLANA_PRIVATE_KEY is required for channel operations.");
-    const rpc = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    const rpc = getPyusdRpcUrl();
     const manager = new ChannelManager({
       connection: new Connection(rpc, "confirmed"),
       payer,

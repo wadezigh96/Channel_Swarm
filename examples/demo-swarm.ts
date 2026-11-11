@@ -14,7 +14,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { SwarmOrchestrator } from "../src/swarm/orchestrator.js";
 import { loadPayerFromEnv, isOnchainMode, requirePayer } from "../src/wallet.js";
-import { getPyusdMint, PYUSD_INFO } from "../src/payments/pyusd.js";
+import { getPyusdMint, getPyusdNetwork, getPyusdRpcUrl, PYUSD_INFO } from "../src/payments/pyusd.js";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -25,7 +25,7 @@ function banner(onchain: boolean, usePyusd: boolean) {
   console.log("  ChannelSwarm — Agentic Payments on Solana");
   console.log(`  Mode: ${onchain ? "ON-CHAIN (real)" : "SIMULATION"}`);
   if (usePyusd) {
-    console.log(`  Asset: PYUSD (${PYUSD_INFO.symbol}) — ${process.env.PYUSD_NETWORK || process.env.NETWORK || "devnet"}`);
+    console.log(`  Asset: PYUSD (${PYUSD_INFO.symbol}) — ${getPyusdNetwork()}`);
   }
   console.log("═".repeat(55));
   console.log("");
@@ -34,10 +34,10 @@ function banner(onchain: boolean, usePyusd: boolean) {
 async function main() {
   const onchain = isOnchainMode();
   const usePyusd = (process.env.USE_PYUSD ?? "true") === "true";
-  const network = (process.env.NETWORK || "devnet").toLowerCase();
+  const network = usePyusd ? getPyusdNetwork() : (process.env.NETWORK || "devnet").toLowerCase();
   banner(onchain, usePyusd);
 
-  const rpc = process.env.SOLANA_RPC_URL || (network === "mainnet" || network === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : network === "testnet" ? "https://api.testnet.solana.com" : "https://api.devnet.solana.com");
+  const rpc = usePyusd ? getPyusdRpcUrl() : process.env.SOLANA_RPC_URL || (network === "mainnet" || network === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : network === "testnet" ? "https://api.testnet.solana.com" : "https://api.devnet.solana.com");
   const connection = new Connection(rpc, "confirmed");
 
   const mint = usePyusd
@@ -48,7 +48,7 @@ async function main() {
 
   if (usePyusd) {
     console.log(`[PYUSD] Using ${PYUSD_INFO.name} mint: ${mint.toBase58()}`);
-    console.log(`[PYUSD] Network: ${process.env.PYUSD_NETWORK || network}`);
+    console.log(`[PYUSD] Network: ${getPyusdNetwork()}`);
   }
 
   if (onchain) {

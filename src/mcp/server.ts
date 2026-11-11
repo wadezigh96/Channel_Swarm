@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createInterface } from "node:readline";
 import { Connection } from "@solana/web3.js";
-import { getPyusdMint } from "../payments/pyusd.js";
+import { getPyusdMint, getPyusdNetwork, getPyusdRpcUrl } from "../payments/pyusd.js";
 import { findUnsupportedChannelMintExtensions } from "../payments/token-compatibility.js";
 import { TOKEN_2022_PROGRAM_ID, getExtensionTypes, getMint } from "@solana/spl-token";
 import { PayPalClient } from "../paypal/paypal-client.js";
@@ -26,7 +26,7 @@ async function pyusdPreflight(rpcUrl: string) {
   const extensions = getExtensionTypes(mint.tlvData);
   const unsupported = findUnsupportedChannelMintExtensions(extensions);
   return {
-    network: (process.env.PYUSD_NETWORK || process.env.NETWORK || "mainnet").toLowerCase(),
+    network: getPyusdNetwork(),
     mint: mintAddress.toBase58(),
     decimals: mint.decimals,
     extensions,
@@ -65,10 +65,10 @@ const tools = [
 
 async function callTool(name: string, args: Record<string, unknown>) {
   if (name === "channelswarm_pyusd_info") {
-    return { symbol: "PYUSD", name: "PayPal USD", decimals: 6, program: "Token-2022", network: (process.env.PYUSD_NETWORK || process.env.NETWORK || "mainnet").toLowerCase(), mint: getPyusdMint().toBase58() };
+    return { symbol: "PYUSD", name: "PayPal USD", decimals: 6, program: "Token-2022", network: getPyusdNetwork(), mint: getPyusdMint().toBase58() };
   }
   if (name === "channelswarm_solana_pyusd_preflight") {
-    const rpcUrl = typeof args.rpcUrl === "string" && args.rpcUrl ? args.rpcUrl : process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    const rpcUrl = typeof args.rpcUrl === "string" && args.rpcUrl ? args.rpcUrl : getPyusdRpcUrl();
     return pyusdPreflight(rpcUrl);
   }
   const paypal = new PayPalClient();

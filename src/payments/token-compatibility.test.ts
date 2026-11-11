@@ -67,5 +67,5 @@ test("open instruction rejects unrelated token program IDs", () => {
     gracePeriod: 1,
     openSlot: 1n,
     tokenProgram: new PublicKey("11111111111111111111111111111111"),
-  }), /tokenProgram must be SPL Token or Token-2022/);
+  }), /unsupported_token_program/);
 });

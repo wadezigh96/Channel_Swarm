@@ -6,13 +6,14 @@
   "scripts": {
     "cli": "tsx cli/channelswarm.ts",
     "mcp": "tsx src/mcp/server.ts",
+    "e2e:paypal:sandbox": "node scripts/paypal-sandbox-e2e.mjs",
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
     "demo:equity": "tsx examples/equity-execution-demo.ts",
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/wallet.test.ts src/payments/voucher.test.ts src/payments/x402.test.ts src/payments/replay-store.test.ts src/paypal/paypal-client.test.ts src/payments/instructions.test.ts src/ai/rail-advisor.test.ts src/paypal/payment-ledger.test.ts src/payments/replay-store.test.ts src/paypal/webhook-event.test.ts",
+    "test": "tsx --test src/*.test.ts src/ai/*.test.ts src/payments/*.test.ts src/paypal/*.test.ts src/mcp/*.test.ts api/*.test.ts",
     "x402:demo": "tsx examples/x402-demo.ts"
   },
   "keywords": [
@@ -27,16 +28,15 @@
   "author": "wadezigh96",
   "license": "MIT",
   "dependencies": {
-    "@solana/web3.js": "^1.98.0",
     "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.98.0",
     "bs58": "^6.0.0",
     "dotenv": "^16.4.5",
-    "tweetnacl": "^1.0.3",
-    "zod": "^3.23.8"
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@vercel/node": "^5.3.0",
+    "@vercel/node": "^30.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
