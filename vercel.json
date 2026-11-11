@@ -4,10 +4,5 @@
   "buildCommand": "npm run build",
   "outputDirectory": "docs",
   "installCommand": "npm install",
-  "framework": null,
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs22.x"
-    }
-  }
+  "framework": null
 }
