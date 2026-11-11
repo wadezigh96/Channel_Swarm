@@ -108,10 +108,10 @@ export class SwarmOrchestrator {
     console.log(`[Swarm] Cycle complete — ${claimed.toFixed(4)} USDC flowed between agents`);
     if (signature) console.log(`[Swarm] Settle signature: ${signature}`);
 
-    // Dual-rail: after Solana channel settle, create PayPal order if configured
+    // Creating an external PayPal order is a separate explicit opt-in.
     let paypalOrderId: string | undefined;
     let paypalApproveUrl: string | undefined;
-    if (this.paypal.isConfigured() && claimed > 0) {
+    if (this.paypal.isConfigured() && process.env.PAYPAL_AUTO_ORDER === "true" && claimed > 0) {
       try {
         const order = await this.paypal.createOrder(
           claimed,
@@ -123,7 +123,9 @@ export class SwarmOrchestrator {
       } catch (err) {
         console.warn("[Dual-rail] PayPal order failed:", err);
       }
-    } else if (!this.paypal.isConfigured()) {
+    } else if (this.paypal.isConfigured()) {
+      console.log("[Dual-rail] Automatic PayPal order disabled — set PAYPAL_AUTO_ORDER=true to opt in");
+    } else {
       console.log("[Dual-rail] PayPal not configured — Solana channel only");
     }
 

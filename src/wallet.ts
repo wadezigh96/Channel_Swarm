@@ -31,11 +31,7 @@ export function requirePayer(): Keypair {
   return kp;
 }
 
-/**
- * Mainnet real transactions are the default.
- * Set ONCHAIN=false only for local testing.
- */
+/** Real transactions require an explicit ONCHAIN=true opt-in. */
 export function isOnchainMode(): boolean {
-  const v = (process.env.ONCHAIN ?? "true").toLowerCase();
-  return v !== "0" && v !== "false" && v !== "sim";
+  return (process.env.ONCHAIN ?? "false").toLowerCase() === "true" || process.env.ONCHAIN === "1";
 }

@@ -11,7 +11,7 @@
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/payments/voucher.test.ts src/payments/x402.test.ts",
+    "test": "tsx --test src/payments/voucher.test.ts src/payments/x402.test.ts src/payments/token-compatibility.test.ts src/payments/channel-manager.test.ts src/payments/rail-advisor.test.ts src/wallet.test.ts api/paypal-order.test.ts api/paypal-webhook.test.ts",
     "x402:demo": "tsx examples/x402-demo.ts"
   },
   "keywords": [

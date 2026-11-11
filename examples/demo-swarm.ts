@@ -1,5 +1,5 @@
 /**
- * ChannelSwarm demo — mainnet real transactions
+ * ChannelSwarm demo — simulation by default, opt-in mainnet transactions
  *
  * Requires:
  *   SOLANA_PRIVATE_KEY  (funded with SOL + PYUSD)
@@ -8,7 +8,7 @@
  * Defaults:
  *   Network: mainnet-beta
  *   Asset:   PYUSD (2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo)
- *   Mode:    ONCHAIN=true (real txs)
+ *   Mode:    ONCHAIN=false (simulation); set ONCHAIN=true only after review
  */
 
 import { Connection, PublicKey } from "@solana/web3.js";

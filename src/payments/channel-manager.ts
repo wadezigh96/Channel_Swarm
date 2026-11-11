@@ -16,7 +16,15 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getAccount } from "@solana/spl-token";
+import {
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  getAccount,
+  getAssociatedTokenAddressSync,
+  getExtensionTypes,
+  getMint,
+} from "@solana/spl-token";
+import { findUnsupportedChannelMintExtensions } from "./token-compatibility.js";
 import nacl from "tweetnacl";
 import {
   buildOpenInstruction,
@@ -127,29 +135,30 @@ export class ChannelManager {
     if (this.onchain) {
       const funded = await this.hasUsdc(ceiling);
       if (!funded.ok) {
-        console.warn(`[Channel] ONCHAIN requested but ${funded.reason} — falling back to sim`);
-      } else {
-        const ix = buildOpenInstruction({
-          payer: this.payer.publicKey,
-          rentPayer: this.payer.publicKey,
-          payee: params.counterparty,
-          mint: this.usdcMint,
-          authorizedSigner: this.payer.publicKey,
-          channel: channelPda,
-          salt,
-          deposit: ceiling,
-          gracePeriod: params.gracePeriod ?? DEFAULT_GRACE_PERIOD,
-          openSlot: BigInt(openSlot),
-          recipients: [],
-          programId: this.programId,
-        });
-        const tx = new Transaction().add(ix);
-        signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
-          commitment: "confirmed",
-        });
-        mode = "onchain";
-        console.log(`[Channel] On-chain open tx: ${signature}`);
+        throw new Error(`ONCHAIN=true preflight failed; refusing to simulate channel open: ${funded.reason}`);
       }
+      const tokenProgram = funded.tokenProgram ?? TOKEN_PROGRAM_ID;
+      const ix = buildOpenInstruction({
+        payer: this.payer.publicKey,
+        rentPayer: this.payer.publicKey,
+        payee: params.counterparty,
+        mint: this.usdcMint,
+        authorizedSigner: this.payer.publicKey,
+        channel: channelPda,
+        salt,
+        deposit: ceiling,
+        gracePeriod: params.gracePeriod ?? DEFAULT_GRACE_PERIOD,
+        openSlot: BigInt(openSlot),
+        recipients: [],
+        tokenProgram,
+        programId: this.programId,
+      });
+      const tx = new Transaction().add(ix);
+      signature = await sendAndConfirmTransaction(this.connection, tx, [this.payer], {
+        commitment: "confirmed",
+      });
+      mode = "onchain";
+      console.log(`[Channel] On-chain open tx: ${signature}`);
     }
 
     this.openChannels.set(channelId, {
@@ -305,23 +314,50 @@ export class ChannelManager {
     });
   }
 
-  private async hasUsdc(needed: bigint): Promise<{ ok: boolean; reason?: string }> {
+  private async hasUsdc(
+    needed: bigint
+  ): Promise<{ ok: boolean; reason?: string; tokenProgram?: PublicKey }> {
     try {
-      const ata = getAssociatedTokenAddressSync(this.usdcMint, this.payer.publicKey);
-      const acc = await getAccount(this.connection, ata);
+      const mintInfo = await this.connection.getAccountInfo(this.usdcMint, "confirmed");
+      if (!mintInfo) return { ok: false, reason: "configured token mint does not exist" };
+      const tokenProgram = mintInfo.owner;
+      if (!tokenProgram.equals(TOKEN_PROGRAM_ID) && !tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
+        return { ok: false, reason: "configured mint is not owned by SPL Token or Token-2022" };
+      }
+      if (tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
+        const mint = await getMint(this.connection, this.usdcMint, "confirmed", tokenProgram);
+        const extensions = getExtensionTypes(mint.tlvData);
+        const unsupported = findUnsupportedChannelMintExtensions(extensions);
+        if (unsupported.length) {
+          return {
+            ok: false,
+            reason: `Token-2022 mint has extensions not accepted by Payment Channels: ${unsupported.join(", ")}`,
+          };
+        }
+      }
+      const ata = getAssociatedTokenAddressSync(
+        this.usdcMint,
+        this.payer.publicKey,
+        false,
+        tokenProgram
+      );
+      const acc = await getAccount(this.connection, ata, "confirmed", tokenProgram);
       if (acc.amount < needed) {
         return {
           ok: false,
-          reason: `USDC ATA has ${Number(acc.amount) / 1e6}, need ${Number(needed) / 1e6}`,
+          reason: `token ATA has ${Number(acc.amount) / 1e6}, need ${Number(needed) / 1e6}`,
         };
       }
       const sol = await this.connection.getBalance(this.payer.publicKey);
       if (sol < 50_000) {
-        return { ok: false, reason: `payer has only ${sol} lamports for fees` };
+        return { ok: false, reason: `payer has only ${sol} lamports for fees`, tokenProgram };
       }
-      return { ok: true };
-    } catch {
-      return { ok: false, reason: "payer USDC ATA missing" };
+      return { ok: true, tokenProgram };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: error instanceof Error ? error.message : "payer token account unavailable",
+      };
     }
   }
 
