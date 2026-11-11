@@ -50,7 +50,6 @@ export class X402ReplayStore {
    if(!response.ok)throw new Error("x402_replay_store_unavailable: "+response.status);
    const payload=await response.json() as {result?:number;error?:string};
    if(payload.error||payload.result===undefined)throw new Error("x402_replay_store_error");
-   if(Number(payload.result)===-1)throw new Error("insufficient_incremental_payment");
    return Number(payload.result)===1;
   }
   if(process.env.VERCEL==="1")throw new Error("durable_x402_replay_store_not_configured");

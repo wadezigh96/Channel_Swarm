@@ -9,7 +9,7 @@ local ranks={UNKNOWN=0,CREATED=1,APPROVED=2,PENDING=3,DENIED=4,COMPLETED=5,REVER
 local current=redis.call('GET',KEYS[1])
 if current then
  local ok,old=pcall(cjson.decode,current)
- if ok and old.status and (ranks[old.status] or 0)>(ranks[ARGV[1]] or 0) then return 0 end
+ if ok and old.status and (ranks[old.status] or 0)>tonumber(ARGV[1]) then return 0 end
 end
 redis.call('SET',KEYS[1],ARGV[2])
 return 1
@@ -41,7 +41,7 @@ export class PayPalLedger {
   const out=await r.json() as {result:T;error?:string};if(out.error)throw new Error("payment_ledger_error");return out.result;
  }
  async save(record:PayPalLedgerRecord):Promise<void>{
-  await this.command<number>("EVAL",SAVE_SCRIPT,"1","channelswarm:paypal:order:"+record.orderId,record.status,JSON.stringify(record));
+  await this.command<number>("EVAL",SAVE_SCRIPT,"1","channelswarm:paypal:order:"+record.orderId,String(({UNKNOWN:0,CREATED:1,APPROVED:2,PENDING:3,DENIED:4,COMPLETED:5,REVERSED:6} as const)[record.status]),JSON.stringify(record));
  }
  async get(orderId:string):Promise<PayPalLedgerRecord|null>{
   const raw=await this.command<string|null>("GET","channelswarm:paypal:order:"+orderId);return raw?JSON.parse(raw) as PayPalLedgerRecord:null;
