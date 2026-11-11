@@ -1,12 +1,13 @@
 {
   "name": "channel-swarm-agent",
   "version": "0.4.1",
-  "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent",
+  "description": "ChannelSwarm — official Solana Payment Channels client + A2A swarm + Stocknized Agent + PayPal dual-rail",
   "type": "module",
   "scripts": {
     "demo": "tsx examples/demo-swarm.ts",
     "demo:onchain": "ONCHAIN=true tsx examples/demo-swarm.ts",
     "demo:equity": "tsx examples/equity-execution-demo.ts",
+    "demo:paypal": "tsx examples/paypal-swarm-demo.ts",
     "dashboard": "npx serve docs -p 3000",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
@@ -20,7 +21,9 @@
     "payment-channels",
     "ai-agent",
     "stocknized",
-    "a2a"
+    "a2a",
+    "paypal",
+    "pyusd"
   ],
   "author": "wadezigh96",
   "license": "MIT",
@@ -34,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@vercel/node": "^5.3.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
